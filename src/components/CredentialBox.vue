@@ -1,5 +1,8 @@
 <template>
   <div class="credential--box">
+    <div class="credential--box__item">
+      <img src="../assets/icons8-account-32.png" />
+    </div>
     <div class="credential--box__item">goggle.com</div>
     <div class="credential--box__item" style="margin-top: 8px">
       username: pumpitkit@yahoo.com
@@ -24,7 +27,7 @@ export default defineComponent({
   height: 160px;
   margin: 24px 24px 0 0;
   border-radius: 8px;
-  padding: 18px 12px 0 12px;
+  padding: 20px 15px 0 15px;
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;

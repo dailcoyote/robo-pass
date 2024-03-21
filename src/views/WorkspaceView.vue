@@ -5,18 +5,25 @@ import CredentialBox from "../components/CredentialBox.vue";
 import AddCredentialModal from "../components/AddCredentialModal.vue";
 
 const router = useRouter();
-const url = ref("");
-const name = ref("");
-const password = ref("");
 
 const state = reactive({
-  addCredentialDialogVisible: false
+  addCredentialDialogVisible: false,
+  url: "",
+  name: "",
+  password: "",
 });
+
+function clearCredentialDialog() {
+  state.url = "";
+  state.name = "";
+  state.password = "";
+}
 
 function openAddCredentialDialog() {
   state.addCredentialDialogVisible = true;
 }
 function closeAddCredentialDialog() {
+  clearCredentialDialog();  
   state.addCredentialDialogVisible = false;
 }
 
@@ -49,16 +56,21 @@ function logout() {
     <AddCredentialModal v-show="state.addCredentialDialogVisible">
       <template v-slot:body>
         <form class="add-credential__form_box" @submit.prevent="addCredentials">
-          <input v-model="url" placeholder="Enter a url..." />
-          <input v-model="name" placeholder="Enter an username..." />
+          <input v-model="state.url" placeholder="Enter a url..." />
+          <input v-model="state.name" placeholder="Enter an username..." />
           <input
-            v-model="password"
+            v-model="state.password"
             placeholder="Enter a password..."
             type="password"
           />
           <div class="row">
             <button class="bluesky-effect" type="submit">Create</button>
-            <button class="vermillion-effect" @click="closeAddCredentialDialog()">Cancel</button>
+            <button
+              class="vermillion-effect"
+              @click="closeAddCredentialDialog()"
+            >
+              Cancel
+            </button>
           </div>
         </form>
       </template>
@@ -106,9 +118,18 @@ function logout() {
 }
 
 .add-credential__form_box > input {
-    margin: 24px 0;
+  margin: 24px 0;
+  will-change: filter;
 }
+.add-credential__form_box > input:hover {
+  filter: drop-shadow(0 0 1em #24c8db);
+}
+
+.add-credential__form_box > input:focus {
+  filter: drop-shadow(0 0 1em #24c8db);
+}
+
 .add-credential__form_box > .row > button {
-    margin: 36px 18px;
+  margin: 36px 18px;
 }
 </style>
