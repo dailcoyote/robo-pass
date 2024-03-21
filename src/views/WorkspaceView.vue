@@ -1,10 +1,26 @@
 <script setup lang="ts">
-// This starter template is using Vue 3 <script setup> SFCs
-// Check out https://vuejs.org/api/sfc-script-setup.html#script-setup
-import CredentialBox from "../components/CredentialBox.vue";
+import { ref, reactive } from "vue";
 import { useRouter } from "vue-router";
+import CredentialBox from "../components/CredentialBox.vue";
+import AddCredentialModal from "../components/AddCredentialModal.vue";
 
 const router = useRouter();
+const url = ref("");
+const name = ref("");
+const password = ref("");
+
+const state = reactive({
+  addCredentialDialogVisible: false
+});
+
+function openAddCredentialDialog() {
+  state.addCredentialDialogVisible = true;
+}
+function closeAddCredentialDialog() {
+  state.addCredentialDialogVisible = false;
+}
+
+function addCredentials() {}
 
 function logout() {
   router.push("/");
@@ -14,7 +30,9 @@ function logout() {
 <template>
   <div class="container" style="padding: 1% 2%">
     <div id="credential--toolbar">
-      <button id="add_credential--button">Add Credentials</button>
+      <button id="add_credential--button" @click="openAddCredentialDialog()">
+        Add Credentials
+      </button>
       <button id="logout--button" @click="logout()">Logout</button>
     </div>
 
@@ -27,6 +45,24 @@ function logout() {
       <CredentialBox />
       <CredentialBox />
     </div>
+
+    <AddCredentialModal v-show="state.addCredentialDialogVisible">
+      <template v-slot:body>
+        <form class="add-credential__form_box" @submit.prevent="addCredentials">
+          <input v-model="url" placeholder="Enter a url..." />
+          <input v-model="name" placeholder="Enter an username..." />
+          <input
+            v-model="password"
+            placeholder="Enter a password..."
+            type="password"
+          />
+          <div class="row">
+            <button class="bluesky-effect" type="submit">Create</button>
+            <button class="vermillion-effect" @click="closeAddCredentialDialog()">Cancel</button>
+          </div>
+        </form>
+      </template>
+    </AddCredentialModal>
   </div>
 </template>
 
@@ -57,5 +93,22 @@ function logout() {
   width: 100%;
   background-color: transparent;
   shape-image-threshold: 70%;
+}
+.add-credential__form_box {
+  display: flex;
+  margin: 0 auto;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8%;
+  /* opacity: 0.35; */
+  shape-image-threshold: 70%;
+  outline: none;
+}
+
+.add-credential__form_box > input {
+    margin: 24px 0;
+}
+.add-credential__form_box > .row > button {
+    margin: 36px 18px;
 }
 </style>

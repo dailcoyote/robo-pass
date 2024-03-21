@@ -15,17 +15,14 @@ async function login() {
 
 <template>
   <form class="login-box">
-    <input class="col" v-model="name" placeholder="Enter an username..." />
+    <input v-model="name" placeholder="Enter an username..." />
     <input
-      class="col"
       v-model="password"
       placeholder="Enter a password..."
       type="password"
     />
-    <button type="submit" class="col" @click="login()">Log In</button>
+    <button type="submit" @click="login()">Log In</button>
   </form>
-
-  <p>{{ greetMsg }}</p>
 </template>
 
 <style scoped>
@@ -60,10 +57,10 @@ async function login() {
 }
 
 .login-box > button:hover {
-  filter: drop-shadow(0 0 1.5em #FFC130);
+  filter: drop-shadow(0 0 1.5em #ffc130);
 }
 
 .login-box > button:focus {
-  filter: drop-shadow(0 0 1.5em #FFC130);
+  filter: drop-shadow(0 0 1.5em #ffc130);
 }
 </style>
