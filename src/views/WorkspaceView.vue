@@ -3,31 +3,45 @@ import { ref, reactive } from "vue";
 import { useRouter } from "vue-router";
 import CredentialBox from "../components/CredentialBox.vue";
 import AddCredentialModal from "../components/AddCredentialModal.vue";
+import CredentialDataContainer from "../classes/CredentialDataContainer";
 
 const router = useRouter();
+const credentials = new CredentialDataContainer();
 
 const state = reactive({
   addCredentialDialogVisible: false,
   url: "",
-  name: "",
+  username: "",
   password: "",
 });
 
 function clearCredentialDialog() {
   state.url = "";
-  state.name = "";
+  state.username = "";
   state.password = "";
 }
 
 function openAddCredentialDialog() {
   state.addCredentialDialogVisible = true;
 }
+
 function closeAddCredentialDialog() {
-  clearCredentialDialog();  
+  clearCredentialDialog();
   state.addCredentialDialogVisible = false;
 }
 
-function addCredentials() {}
+function addKeeperCredential() {
+  let url = state.url;
+  let username = state.username;
+  let password = state.password;
+
+  credentials.add({
+    url,
+    username,
+    password,
+  });
+  closeAddCredentialDialog();
+}
 
 function logout() {
   router.push("/");
@@ -44,20 +58,22 @@ function logout() {
     </div>
 
     <div class="credential--box-list">
-      <CredentialBox />
-      <CredentialBox />
-      <CredentialBox />
-      <CredentialBox />
-      <CredentialBox />
-      <CredentialBox />
-      <CredentialBox />
+      <template
+        v-for="{ url, username, password } in credentials.list()"
+        :key="username"
+      >
+        <CredentialBox :url="url" :username="username" :password="password" />
+      </template>
     </div>
 
     <AddCredentialModal v-show="state.addCredentialDialogVisible">
       <template v-slot:body>
-        <form class="add-credential__form_box" @submit.prevent="addCredentials">
+        <form
+          class="add-credential__form_box"
+          @submit.prevent="addKeeperCredential"
+        >
           <input v-model="state.url" placeholder="Enter a url..." />
-          <input v-model="state.name" placeholder="Enter an username..." />
+          <input v-model="state.username" placeholder="Enter an username..." />
           <input
             v-model="state.password"
             placeholder="Enter a password..."

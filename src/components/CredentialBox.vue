@@ -3,22 +3,21 @@
     <div class="credential--box__item">
       <img src="../assets/icons8-account-32.png" />
     </div>
-    <div class="credential--box__item">goggle.com</div>
+    <div class="credential--box__item">{{ props.url }}</div>
     <div class="credential--box__item" style="margin-top: 8px">
-      username: pumpitkit@yahoo.com
+      username: {{ props.username }}
     </div>
     <div class="credential--box__item" style="margin-top: 8px">
-      password: kdk88888888
+      password: {{ props.password }}
     </div>
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent } from "vue";
+<script setup lang="ts">
+import { Credential } from "../types";
+import { defineProps } from "vue";
 
-export default defineComponent({
-  name: "CredentialBox",
-});
+const props = defineProps<Credential>();
 </script>
 
 <style scoped>
