@@ -1,0 +1,25 @@
+.login-box {
+    display: flex;
+    margin: 0 auto;
+    flex-direction: column;
+    justify-content: center;
+    padding: 5%;
+    width: 25%;
+    /* opacity: 0.35; */
+    shape-image-threshold: 70%;
+    outline: none;
+}
+
+.login-box > input {
+    margin: 24px 0;
+    will-change: filter;
+}
+
+.login-box > input:hover {
+    filter: drop-shadow(0 0 1em #24c8db);
+}
+
+.login-box > input:focus {
+    filter: drop-shadow(0 0 1em #24c8db);
+}
+  

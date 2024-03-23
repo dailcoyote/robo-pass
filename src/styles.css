@@ -24,6 +24,7 @@
   flex-direction: column;
   justify-content: center;
   text-align: center;
+  padding: 1% 2%;
 }
 
 .logo {
@@ -40,6 +41,11 @@
 .row {
   display: flex;
   justify-content: center;
+}
+
+.start_row {
+  display: flex;
+  justify-content: start;
 }
 
 h1, h2, h3, h4 {
@@ -76,6 +82,24 @@ button {
 
 .bluesky-effect:hover {
   filter: drop-shadow(0 0 2em #24c8db);
+}
+
+.lemon-effect {
+  will-change: filter;
+  transition: 0.5s;
+}
+
+.lemon-effect:hover {
+  filter: drop-shadow(0 0 2em #ffc130);
+}
+
+.white-effect {
+  will-change: filter;
+  transition: 0.5s;
+}
+
+.white-effect:hover {
+  filter: drop-shadow(0 0 1em #ffffff);
 }
 
 .vermillion-effect {

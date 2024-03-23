@@ -1,7 +1,20 @@
 <script setup lang="ts">
-// This starter template is using Vue 3 <script setup> SFCs
-// Check out https://vuejs.org/api/sfc-script-setup.html#script-setup
-import LoginForm from "../components/LoginForm.vue";
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import "../login.css";
+
+const router = useRouter();
+
+const name = ref("");
+const password = ref("");
+
+async function login() {
+  router.push("/workspace");
+}
+
+async function onNavigateToCreate() {
+  router.push("/signup");
+}
 </script>
 
 <template>
@@ -14,7 +27,12 @@ import LoginForm from "../components/LoginForm.vue";
       </a>
     </div>
 
-    <LoginForm />
+    <form class="login-box">
+      <input v-model="name" placeholder="Enter an username..." required/>
+      <input v-model="password" placeholder="Master password" type="password" required/>
+      <button type="submit" id="login-btn" @click="login()">Log In</button>
+      <button class="white-effect" @click="onNavigateToCreate">Create an account</button>
+    </form>
   </div>
 </template>
 
@@ -25,5 +43,18 @@ import LoginForm from "../components/LoginForm.vue";
 
 .logo.vue:hover {
   filter: drop-shadow(0 0 2em #249b73);
+}
+
+.login-box > #login-btn {
+  margin: 60px 0 36px 0;
+  will-change: filter;
+}
+
+.login-box > #login-btn:hover {
+  filter: drop-shadow(0 0 1.5em #ffc130);
+}
+
+.login-box > #login-btn:focus {
+  filter: drop-shadow(0 0 1.5em #ffc130);
 }
 </style>

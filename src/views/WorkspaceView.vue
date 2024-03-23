@@ -49,7 +49,7 @@ function logout() {
 </script>
 
 <template>
-  <div class="container" style="padding: 1% 2%">
+  <div class="container">
     <div id="credential--toolbar">
       <button id="add_credential--button" @click="openAddCredentialDialog()">
         Add Credentials
@@ -113,6 +113,7 @@ function logout() {
 #logout--button:hover {
   filter: drop-shadow(0 0 1em #24c8db);
 }
+
 .credential--box-list {
   display: flex;
   flex-wrap: wrap;
@@ -122,6 +123,7 @@ function logout() {
   background-color: transparent;
   shape-image-threshold: 70%;
 }
+
 .add-credential__form_box {
   display: flex;
   margin: 0 auto;
@@ -137,6 +139,7 @@ function logout() {
   margin: 24px 0;
   will-change: filter;
 }
+
 .add-credential__form_box > input:hover {
   filter: drop-shadow(0 0 1em #24c8db);
 }
