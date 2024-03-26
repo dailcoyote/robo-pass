@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { invoke } from "@tauri-apps/api/tauri";
 import "../login.css";
 
 const router = useRouter();
@@ -9,12 +10,23 @@ const name = ref("");
 const password = ref("");
 const retypePassword = ref("");
 
+const errMsg = ref("");
+const infoMsg = ref("");
+
 function back() {
   router.push("/");
 }
 
 async function create() {
-  router.push("/workspace");
+  try {
+    await invoke("create_account", {
+      username: name.value,
+      password: password.value
+    });
+    router.push("/workspace");
+  } catch (error: any) {
+    errMsg.value = error || "Crash";
+  }
 }
 </script>
 
@@ -26,7 +38,9 @@ async function create() {
       <button class="lemon-effect" @click="back">Back</button>
     </div>
 
-    <form class="login-box">
+    {{infoMsg}}
+
+    <form class="login-box" onsubmit="event.preventDefault();">
       <input v-model="name" placeholder="Enter an username..." required />
       <input
         v-model="password"
@@ -41,6 +55,7 @@ async function create() {
         required
       />
       <button type="submit" id="create-btn" @click="create()">Create</button>
+      {{errMsg}}
     </form>
   </div>
 </template>

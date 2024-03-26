@@ -1,19 +1,22 @@
 <script setup lang="ts">
 import { invoke } from "@tauri-apps/api/tauri";
-import { ref, reactive } from "vue";
+import { ref, reactive, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import CredentialBox from "../components/CredentialBox.vue";
 import AddCredentialModal from "../components/AddCredentialModal.vue";
-import CredentialStorage from "../classes/CredentialStorage";
+// import CredentialStorage from "../classes/CredentialStorage";
+import { Credential } from "../types";
 
-const credentials = new CredentialStorage();
+// const credentials = new CredentialStorage();
 const router = useRouter();
 const state = reactive({
   addCredentialDialogVisible: false,
   url: "",
   username: "",
   password: "",
+  credentialsSharedMemory: new Map<String, Credential>(),
 });
+const infoMsg = ref("");
 
 function clearCredentialDialog() {
   state.url = "";
@@ -21,13 +24,24 @@ function clearCredentialDialog() {
   state.password = "";
 }
 
-function openAddCredentialDialog() {
+function openCredentialDialog() {
   state.addCredentialDialogVisible = true;
 }
 
-function closeAddCredentialDialog() {
+function closeCredentialDialog() {
   clearCredentialDialog();
   state.addCredentialDialogVisible = false;
+}
+
+function fetchKeeperCredentials() {
+  state.credentialsSharedMemory.clear();
+  invoke("fetch_privacy_heap")
+    .then((heap: any) => {
+      state.credentialsSharedMemory = new Map<String, Credential>(Object.entries(heap));
+    })
+    .catch((e: any) => {
+      infoMsg.value = e;
+    });
 }
 
 async function addKeeperCredential() {
@@ -35,35 +49,43 @@ async function addKeeperCredential() {
   let username = state.username;
   let password = state.password;
 
-  const hashKey = Math.random().toString(36).substring(2, 12);
+  try {
+    await invoke("add_privacy", {
+      url,
+      username,
+      password,
+    });
+    fetchKeeperCredentials();
+  } catch (e: any) {
+    infoMsg.value = e;
+  }
 
-  credentials.add(hashKey, {
-    url,
-    username,
-    password,
-  });
-  await invoke("submit", { serializedKeepers: credentials.bulk() });
-
-  closeAddCredentialDialog();
+  closeCredentialDialog();
 }
 
 function logout() {
   router.push("/");
 }
+
+onMounted(() => {
+  fetchKeeperCredentials();
+});
 </script>
 
 <template>
   <div class="container">
     <div id="credential--toolbar">
-      <button id="add_credential--button" @click="openAddCredentialDialog()">
+      <button id="add_credential--button" @click="openCredentialDialog()">
         Add Credentials
       </button>
       <button id="logout--button" @click="logout()">Logout</button>
     </div>
 
+    {{ infoMsg }}
+
     <div class="credential--box-list">
       <template
-        v-for="[key, { url, username, password }] in credentials.bulk()"
+        v-for="[key, { url, username, password }] in state.credentialsSharedMemory"
         :key="key"
       >
         <CredentialBox :url="url" :username="username" :password="password" />
@@ -85,10 +107,7 @@ function logout() {
           />
           <div class="row">
             <button class="bluesky-effect" type="submit">Create</button>
-            <button
-              class="vermillion-effect"
-              @click="closeAddCredentialDialog()"
-            >
+            <button class="vermillion-effect" @click="closeCredentialDialog()">
               Cancel
             </button>
           </div>
