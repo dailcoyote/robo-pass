@@ -1,13 +1,13 @@
 <script setup lang="ts">
+import { invoke } from "@tauri-apps/api/tauri";
 import { ref, reactive } from "vue";
 import { useRouter } from "vue-router";
 import CredentialBox from "../components/CredentialBox.vue";
 import AddCredentialModal from "../components/AddCredentialModal.vue";
-import CredentialDataContainer from "../classes/CredentialDataContainer";
+import CredentialStorage from "../classes/CredentialStorage";
 
+const credentials = new CredentialStorage();
 const router = useRouter();
-const credentials = new CredentialDataContainer();
-
 const state = reactive({
   addCredentialDialogVisible: false,
   url: "",
@@ -30,16 +30,20 @@ function closeAddCredentialDialog() {
   state.addCredentialDialogVisible = false;
 }
 
-function addKeeperCredential() {
+async function addKeeperCredential() {
   let url = state.url;
   let username = state.username;
   let password = state.password;
 
-  credentials.add({
+  const hashKey = Math.random().toString(36).substring(2, 12);
+
+  credentials.add(hashKey, {
     url,
     username,
     password,
   });
+  await invoke("submit", { serializedKeepers: credentials.bulk() });
+
   closeAddCredentialDialog();
 }
 
@@ -59,8 +63,8 @@ function logout() {
 
     <div class="credential--box-list">
       <template
-        v-for="{ url, username, password } in credentials.list()"
-        :key="username"
+        v-for="[key, { url, username, password }] in credentials.bulk()"
+        :key="key"
       >
         <CredentialBox :url="url" :username="username" :password="password" />
       </template>
