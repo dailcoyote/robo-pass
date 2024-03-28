@@ -1,8 +1,3 @@
-// #[tauri::command]
-// pub fn test(a: i8, b: i8) -> i8 {
-//     a + b
-// }
-
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -35,24 +30,24 @@ pub struct Privacy {
 
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
 pub struct Keeper {
-    pub unique_id: String,
+    pub username: String,
     pub heap: HashMap<String, Privacy>,
 }
 
 impl Keeper {
-    pub fn create(unique_id: String) -> Self {
+    pub fn create(username: String) -> Self {
         Self {
-            unique_id,
+            username,
             ..Self::default()
         }
     }
-    pub fn unique_id(&self) -> &str {
-        &self.unique_id
+    pub fn username(&self) -> &str {
+        &self.username
     }
 
-    pub fn add(&mut self, unique_id: String, url: String, username: String, password: String) {
+    pub fn add(&mut self, uuid_key: String, url: String, username: String, password: String) {
         self.heap.insert(
-            unique_id,
+            uuid_key,
             Privacy {
                 url,
                 username,
@@ -61,12 +56,12 @@ impl Keeper {
         );
     }
 
-    pub fn remove(&mut self, unique_id: &str) -> bool {
-        self.heap.remove(unique_id).is_some()
+    pub fn remove(&mut self, uuid_key: &str) -> bool {
+        self.heap.remove(uuid_key).is_some()
     }
 
-    pub fn entry(&self, unique_id: &str) -> Option<&Privacy> {
-        self.heap.get(unique_id)
+    pub fn entry(&self, uuid_key: &str) -> Option<&Privacy> {
+        self.heap.get(uuid_key)
     }
 
     pub fn entries(&self) -> impl Iterator<Item = (&String, &Privacy)> {
@@ -84,7 +79,7 @@ pub struct UserSession {
 }
 
 fn disk_dump(session: &UserSession) -> Result<(), Error> {
-    println!("{:?}", session.keeper);
+    println!("[robo-pass] Keeper dump {:?}", session.keeper);
     let encrypted_blob = EncryptedBlob::encrypt(&session.keeper, &session.key)?;
     let file_content = session
         .nonce
@@ -103,25 +98,27 @@ pub fn add_privacy(
     username: String,
     password: String,
     session_mutex: State<'_, Mutex<Option<UserSession>>>,
-) -> Result<HashMap<String, Privacy>, Error> {
+) -> Result<bool, Error> {
     if url.is_empty() || username.is_empty() || password.is_empty() {
         return Err(Error::InvalidReader);
     }
     let mut session_guard = session_mutex.lock()?;
     let session = session_guard.as_mut().ok_or(Error::InvalidReader)?;
-    let unique_id = Uuid::new_v4().to_string();
-    session.keeper.add(unique_id, url, username, password);
+    let rand_uuid_key = Uuid::new_v4().to_string();
+    session.keeper.add(rand_uuid_key, url, username, password);
     disk_dump(session)?;
-    Ok(session.keeper.heap.clone())
+    Ok(true)
 }
 
 #[tauri::command]
 pub fn fetch_privacy_heap(
     session_mutex: State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<HashMap<String, Privacy>, Error> {
-    println!("Fetching credentials");
+  
     let session_guard = session_mutex.lock()?;
     let session = session_guard.as_ref().ok_or(Error::InvalidReader)?;
+    let heap = session.keeper.heap.clone();
+    println!("[robo-pass] Fetching privacy data {:?}", heap);
     Ok(session.keeper.heap.clone())
 }
 
@@ -134,9 +131,10 @@ pub fn create_account(
     if username.is_empty() || password.is_empty() {
         return Err(Error::InvalidKeeper);
     }
-    println!("Creating an account... {0}. {1},", username, password);
+    println!("[robo-pass] Creating an account... {0}. {1},", username, password);
     let mut session = session.lock()?;
     if session.is_some() {
+        println!("[robo-pass] Session exists");
         return Err(Error::Unexpected);
     }
     let file = APP_FOLDER.join(format!("{username}.pwdb"));
@@ -146,8 +144,7 @@ pub fn create_account(
     let master_key = cryptography::pbkdf2_hmac(password.as_bytes(), username.as_bytes());
     let key = cryptography::random_bytes::<32>();
     let (encrypted_key, nonce) = cryptography::encrypt_key(&master_key, &key)?;
-    let unique_id = Uuid::new_v4().to_string();
-    let keeper = Keeper::create(unique_id);
+    let keeper = Keeper::create(username);
     *session = Some(UserSession {
         file,
         nonce,
@@ -156,6 +153,64 @@ pub fn create_account(
         keeper,
     });
     disk_dump(session.as_ref().unwrap())?;
-    println!("An account created");
+    println!("[robo-pass] An account created");
     Ok(())
 }
+
+#[tauri::command]
+pub fn login(
+    username: String,
+    password: String,
+    session: State<'_, Mutex<Option<UserSession>>>,
+) -> Result<(), Error> {
+    println!("[robo-pass] Logging in {0}", username);
+    if username.is_empty() || password.is_empty() {
+        return Err(Error::InvalidKeeper);
+    }
+    let mut session = session.lock()?;
+    if session.is_some() {
+        println!("[robo-pass] Session exists");
+        return Err(Error::Unexpected);
+    }
+    let file = APP_FOLDER.join(format!("{username}.pwdb"));
+    if !file.exists() {
+        println!("[robo-pass] File doesn't exist");
+        return Err(Error::InvalidKeeper);
+    }
+    let file_contents = fs::read(&file)?;
+    if file_contents.len() < 16 + 32 + 1 {
+        println!("[robo-pass] Broken bytes");
+        return Err(Error::InvalidReader);
+    }
+    let nonce: [u8; 16] = file_contents[..16].try_into().unwrap();
+    let encrypted_key: [u8; 32] = file_contents[16..16 + 32].try_into().unwrap();
+    let master_key = cryptography::pbkdf2_hmac(password.as_bytes(), username.as_bytes());
+    let key = cryptography::decrypt_key(&master_key, &encrypted_key, &nonce)
+        .map_err(|_| Error::InvalidKeeper)?;
+    let keeper: Keeper = EncryptedBlob::from_bytes(&file_contents[16 + 32..])?
+        .decrypt(&key)
+        .map_err(|_| Error::InvalidKeeper)?;
+    if keeper.username() != username {
+        println!("[robo-pass] User not found");
+        return Err(Error::InvalidReader);
+    }
+    println!("[robo-pass] {:?}", keeper.clone());
+    *session = Some(UserSession {
+        file,
+        nonce,
+        encrypted_key,
+        key,
+        keeper
+    });
+    println!("[robo-pass] {0} logged", username);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn logout(session: State<'_, Mutex<Option<UserSession>>>) -> Result<(), Error> {
+  let mut session = session.lock()?;
+  println!("[robo-pass] Logging out {0}", logged_in=session.is_some());
+  *session = None;
+  Ok(())
+}
+

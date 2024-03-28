@@ -6,12 +6,11 @@ import "../login.css";
 
 const router = useRouter();
 
-const name = ref("");
+const username = ref("");
 const password = ref("");
 const retypePassword = ref("");
 
 const errMsg = ref("");
-const infoMsg = ref("");
 
 function back() {
   router.push("/");
@@ -20,12 +19,12 @@ function back() {
 async function create() {
   try {
     await invoke("create_account", {
-      username: name.value,
+      username: username.value,
       password: password.value
     });
     router.push("/workspace");
-  } catch (error: any) {
-    errMsg.value = error || "Crash";
+  } catch (e: any) {
+    errMsg.value = e.error || "System Crash";
   }
 }
 </script>
@@ -38,10 +37,8 @@ async function create() {
       <button class="lemon-effect" @click="back">Back</button>
     </div>
 
-    {{infoMsg}}
-
     <form class="login-box" onsubmit="event.preventDefault();">
-      <input v-model="name" placeholder="Enter an username..." required />
+      <input v-model="username" placeholder="Enter an username..." required />
       <input
         v-model="password"
         placeholder="Master password"
@@ -55,7 +52,7 @@ async function create() {
         required
       />
       <button type="submit" id="create-btn" @click="create()">Create</button>
-      {{errMsg}}
+      <p class="alert" v-show="errMsg">{{errMsg}}</p>
     </form>
   </div>
 </template>

@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 use openssl::error::ErrorStack;
-use openssl::hash::MessageDigest;
+use openssl::hash::{MessageDigest};
 use openssl::rand::rand_bytes;
 use openssl::symm::{Cipher, encrypt_aead, decrypt_aead, encrypt, decrypt};
 use serde::{Serialize, de::DeserializeOwned};

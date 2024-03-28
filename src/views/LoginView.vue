@@ -1,15 +1,27 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { invoke } from "@tauri-apps/api/tauri";
 import "../login.css";
 
 const router = useRouter();
 
-const name = ref("");
+const username = ref("");
 const password = ref("");
 
+const errMsg = ref("");
+const infoMsg = ref("");
+
 async function login() {
-  router.push("/workspace");
+  try {
+    await invoke("login", {
+      username: username.value,
+      password: password.value,
+    });
+    router.push("/workspace");
+  } catch (e: any) {
+    errMsg.value = e.error || "System Crash";
+  }
 }
 
 async function onNavigateToCreate() {
@@ -27,11 +39,19 @@ async function onNavigateToCreate() {
       </a>
     </div>
 
-    <form class="login-box">
-      <input v-model="name" placeholder="Enter an username..." required/>
-      <input v-model="password" placeholder="Master password" type="password" required/>
+    <form class="login-box" onsubmit="event.preventDefault();">
+      <input v-model="username" placeholder="Enter an username..." required />
+      <input
+        v-model="password"
+        placeholder="Master password"
+        type="password"
+        required
+      />
       <button type="submit" id="login-btn" @click="login()">Log In</button>
-      <button class="white-effect" @click="onNavigateToCreate">Create an account</button>
+      <button class="white-effect" @click="onNavigateToCreate">
+        Create an account
+      </button>
+      <p class="alert" v-show="errMsg">{{errMsg}}</p>
     </form>
   </div>
 </template>

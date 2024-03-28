@@ -4,10 +4,8 @@ import { ref, reactive, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import CredentialBox from "../components/CredentialBox.vue";
 import AddCredentialModal from "../components/AddCredentialModal.vue";
-// import CredentialStorage from "../classes/CredentialStorage";
 import { Credential } from "../types";
 
-// const credentials = new CredentialStorage();
 const router = useRouter();
 const state = reactive({
   addCredentialDialogVisible: false,
@@ -33,15 +31,16 @@ function closeCredentialDialog() {
   state.addCredentialDialogVisible = false;
 }
 
-function fetchKeeperCredentials() {
-  state.credentialsSharedMemory.clear();
-  invoke("fetch_privacy_heap")
-    .then((heap: any) => {
-      state.credentialsSharedMemory = new Map<String, Credential>(Object.entries(heap));
-    })
-    .catch((e: any) => {
-      infoMsg.value = e;
-    });
+async function fetchKeeperCredentials() {
+  try {
+    state.credentialsSharedMemory.clear();
+    const heap: Object = await invoke("fetch_privacy_heap");
+    state.credentialsSharedMemory = new Map<String, Credential>(
+      Object.entries(heap)
+    );
+  } catch (e: any) {
+    infoMsg.value = e.error || "Error reading credentials";
+  }
 }
 
 async function addKeeperCredential() {
@@ -55,15 +54,16 @@ async function addKeeperCredential() {
       username,
       password,
     });
-    fetchKeeperCredentials();
-  } catch (e: any) {
-    infoMsg.value = e;
-  }
 
-  closeCredentialDialog();
+    fetchKeeperCredentials();
+    closeCredentialDialog();
+  } catch (e: any) {
+    infoMsg.value = e.error || "Error inserting credentials";
+  }
 }
 
 function logout() {
+  invoke("logout");
   router.push("/");
 }
 
@@ -85,7 +85,10 @@ onMounted(() => {
 
     <div class="credential--box-list">
       <template
-        v-for="[key, { url, username, password }] in state.credentialsSharedMemory"
+        v-for="[
+          key,
+          { url, username, password },
+        ] in state.credentialsSharedMemory"
         :key="key"
       >
         <CredentialBox :url="url" :username="username" :password="password" />

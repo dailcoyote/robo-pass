@@ -13,11 +13,11 @@ pub enum Error {
 impl Error {
     fn message(&self) -> &'static str {
         match self {
-            Self::InvalidKeeper => "invalid keeper",
-            Self::InvalidReader => "invalid reader",
-            Self::InvalidParameter => "invalid parameter",
-            Self::UsernameTaken => "username already registered",
-            Self::Unexpected => "unexpected error occurred",
+            Self::InvalidKeeper => "[robo-pass] invalid keeper",
+            Self::InvalidReader => "[robo-pass] invalid reader",
+            Self::InvalidParameter => "[robo-pass] invalid parameter",
+            Self::UsernameTaken => "[robo-pass] username already registered",
+            Self::Unexpected => "[robo-pass] unexpected error occurred",
         }
     }
 
@@ -34,7 +34,7 @@ impl Error {
 
 impl<T: std::error::Error> From<T> for Error {
     fn from(e: T) -> Self {
-        // logs::error!("Unexpected error", e);
+        println!("[robo-pass] Unexpected error {0}", e);
         Self::Unexpected
     }
 }
