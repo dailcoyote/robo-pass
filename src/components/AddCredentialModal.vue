@@ -49,7 +49,8 @@ export default defineComponent({
   flex-direction: column;
   width: 600px;
   height: 600px;
-  background: repeat url('../assets/wood_texture.png');
+  background: no-repeat url('../assets/lord.jpg');
+  background-size: cover;
 }
 
 #credential--modal__content_body {

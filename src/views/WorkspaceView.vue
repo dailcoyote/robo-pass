@@ -9,25 +9,26 @@ import { Credential } from "../types";
 const router = useRouter();
 const state = reactive({
   addCredentialDialogVisible: false,
-  url: "",
-  username: "",
-  password: "",
+  dialog: {
+    url: "",
+    username: "",
+    password: "",
+  },
   credentialsSharedMemory: new Map<String, Credential>(),
+  lastCredentialModifications: new Array<String>(),
+  infoBoard: "",
+  validatorBox: "",
 });
-const infoMsg = ref("");
-
-function clearCredentialDialog() {
-  state.url = "";
-  state.username = "";
-  state.password = "";
-}
 
 function openCredentialDialog() {
   state.addCredentialDialogVisible = true;
 }
 
 function closeCredentialDialog() {
-  clearCredentialDialog();
+  state.validatorBox = "";
+  state.dialog.url = "";
+  state.dialog.username = "";
+  state.dialog.password = "";
   state.addCredentialDialogVisible = false;
 }
 
@@ -39,26 +40,27 @@ async function fetchKeeperCredentials() {
       Object.entries(heap)
     );
   } catch (e: any) {
-    infoMsg.value = e.error || "Error reading credentials";
+    state.infoBoard = e.error || "Error reading credentials";
   }
 }
 
 async function addKeeperCredential() {
-  let url = state.url;
-  let username = state.username;
-  let password = state.password;
+  let url = state.dialog.url;
+  let username = state.dialog.username;
+  let password = state.dialog.password;
 
   try {
-    await invoke("add_privacy", {
+    state.validatorBox = "";
+    const uuid: String = await invoke("add_privacy", {
       url,
       username,
       password,
     });
-
+    state.lastCredentialModifications.push(uuid);
     fetchKeeperCredentials();
     closeCredentialDialog();
   } catch (e: any) {
-    infoMsg.value = e.error || "Error inserting credentials";
+    state.validatorBox = e.error || "Error inserting credentials";
   }
 }
 
@@ -81,7 +83,7 @@ onMounted(() => {
       <button id="logout--button" @click="logout()">Logout</button>
     </div>
 
-    {{ infoMsg }}
+    {{ state.infoBoard }}
 
     <div class="credential--box-list">
       <template
@@ -91,7 +93,8 @@ onMounted(() => {
         ] in state.credentialsSharedMemory"
         :key="key"
       >
-        <CredentialBox :url="url" :username="username" :password="password" />
+        <CredentialBox :url="url" :username="username" :password="password" 
+        :class="[state.lastCredentialModifications.includes(key) ? 'active-credential__box' : '']" />
       </template>
     </div>
 
@@ -101,10 +104,10 @@ onMounted(() => {
           class="add-credential__form_box"
           @submit.prevent="addKeeperCredential"
         >
-          <input v-model="state.url" placeholder="Enter a url..." />
-          <input v-model="state.username" placeholder="Enter an username..." />
+          <input v-model="state.dialog.url" placeholder="Enter a url..." />
+          <input v-model="state.dialog.username" placeholder="Enter an username..." />
           <input
-            v-model="state.password"
+            v-model="state.dialog.password"
             placeholder="Enter a password..."
             type="password"
           />
@@ -114,6 +117,9 @@ onMounted(() => {
               Cancel
             </button>
           </div>
+          <p class="alert" v-show="state.validatorBox">
+            {{ state.validatorBox }}
+          </p>
         </form>
       </template>
     </AddCredentialModal>
@@ -176,5 +182,9 @@ onMounted(() => {
 
 .add-credential__form_box > .row > button {
   margin: 36px 18px;
+}
+
+.active-credential__box {
+  border: 1px solid #4FFFB0;
 }
 </style>

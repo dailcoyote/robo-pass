@@ -98,16 +98,17 @@ pub fn add_privacy(
     username: String,
     password: String,
     session_mutex: State<'_, Mutex<Option<UserSession>>>,
-) -> Result<bool, Error> {
+) -> Result<String, Error> {
     if url.is_empty() || username.is_empty() || password.is_empty() {
         return Err(Error::InvalidReader);
     }
     let mut session_guard = session_mutex.lock()?;
     let session = session_guard.as_mut().ok_or(Error::InvalidReader)?;
     let rand_uuid_key = Uuid::new_v4().to_string();
+    let cloned_uuid_key = rand_uuid_key.clone();
     session.keeper.add(rand_uuid_key, url, username, password);
     disk_dump(session)?;
-    Ok(true)
+    Ok(cloned_uuid_key)
 }
 
 #[tauri::command]
