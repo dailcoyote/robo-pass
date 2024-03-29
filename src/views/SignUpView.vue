@@ -18,9 +18,18 @@ function back() {
 
 async function create() {
   try {
+    if (!username.value) {
+      errMsg.value = "Username is empty";
+      return;
+    }
+    if (password.value !== retypePassword.value) {
+      errMsg.value = "Password mismatch";
+      return;
+    }
+
     await invoke("create_account", {
       username: username.value,
-      password: password.value
+      password: password.value,
     });
     router.push("/workspace");
   } catch (e: any) {
@@ -52,7 +61,7 @@ async function create() {
         required
       />
       <button type="submit" id="create-btn" @click="create()">Create</button>
-      <p class="alert" v-show="errMsg">{{errMsg}}</p>
+      <p class="alert" v-show="errMsg">{{ errMsg }}</p>
     </form>
   </div>
 </template>
