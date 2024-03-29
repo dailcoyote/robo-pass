@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { invoke } from "@tauri-apps/api/tauri";
-import { ref, reactive, onMounted } from "vue";
+import { reactive, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import CredentialBox from "../components/CredentialBox.vue";
 import AddCredentialModal from "../components/AddCredentialModal.vue";

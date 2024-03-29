@@ -10,7 +10,6 @@ const username = ref("");
 const password = ref("");
 
 const errMsg = ref("");
-const infoMsg = ref("");
 
 async function login() {
   try {
