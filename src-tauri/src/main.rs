@@ -17,6 +17,7 @@ use kernel::fetch_privacy_heap;
 use kernel::remove_privacy;
 use kernel::login;
 use kernel::logout;
+use kernel::can_user_access;
 use kernel::UserSession;
 use kernel::APP_FOLDER;
 
@@ -34,7 +35,8 @@ fn main() {
             fetch_privacy_heap,
             remove_privacy,
             login,
-            logout
+            logout,
+            can_user_access
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

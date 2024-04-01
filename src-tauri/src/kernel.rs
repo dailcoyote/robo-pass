@@ -267,3 +267,9 @@ pub fn logout(session: State<'_, Mutex<Option<UserSession>>>) -> Result<(), Erro
     *session = None;
     Ok(())
 }
+
+#[tauri::command]
+pub fn can_user_access(session: State<'_, Mutex<Option<UserSession>>>) -> Result<bool, Error> {
+    let mut session = session.lock()?;
+    Ok(session.is_some())
+}
