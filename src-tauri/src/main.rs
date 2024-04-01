@@ -14,6 +14,7 @@ use kernel::add_privacy;
 use kernel::update_privacy;
 use kernel::create_account;
 use kernel::fetch_privacy_heap;
+use kernel::remove_privacy;
 use kernel::login;
 use kernel::logout;
 use kernel::UserSession;
@@ -31,6 +32,7 @@ fn main() {
             add_privacy,
             update_privacy,
             fetch_privacy_heap,
+            remove_privacy,
             login,
             logout
         ])

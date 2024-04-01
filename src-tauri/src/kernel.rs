@@ -45,9 +45,9 @@ impl Keeper {
         &self.username
     }
 
-    pub fn add(&mut self, uuid_key: String, url: String, username: String, password: String) {
+    pub fn add(&mut self, uniqid: String, url: String, username: String, password: String) {
         self.heap.insert(
-            uuid_key,
+            uniqid,
             Privacy {
                 url,
                 username,
@@ -56,12 +56,12 @@ impl Keeper {
         );
     }
 
-    pub fn remove(&mut self, uuid_key: &str) -> bool {
-        self.heap.remove(uuid_key).is_some()
+    pub fn remove(&mut self, uniqid: &str) -> bool {
+        self.heap.remove(uniqid).is_some()
     }
 
-    pub fn update(&mut self, uuid_key: &String, url: String, username: String, password: String) {
-        match self.heap.get_mut(uuid_key) {
+    pub fn update(&mut self, uniqid: &String, url: String, username: String, password: String) {
+        match self.heap.get_mut(uniqid) {
             Some(privacy) => {
                 *privacy = Privacy {
                     url,
@@ -70,14 +70,14 @@ impl Keeper {
                 }
             } // If the key exists, update the value
             None => println!(
-                "[robo-pass] UUID Key '{}' does not exist in the HashMap.",
-                uuid_key
+                "[robo-pass] Unique Id '{}' does not exist in the HashMap.",
+                uniqid
             ), // If the key does not exist, print a message
         }
     }
 
-    pub fn entry(&self, uuid_key: &str) -> Option<&Privacy> {
-        self.heap.get(uuid_key)
+    pub fn entry(&self, uniqid: &str) -> Option<&Privacy> {
+        self.heap.get(uniqid)
     }
 
     pub fn entries(&self) -> impl Iterator<Item = (&String, &Privacy)> {
@@ -118,29 +118,31 @@ pub fn add_privacy(
     if url.is_empty() || username.is_empty() || password.is_empty() {
         return Err(Error::InvalidReader);
     }
+    println!("[robo-pass] Adding privacy");
     let mut session_guard = session_mutex.lock()?;
     let session = session_guard.as_mut().ok_or(Error::InvalidReader)?;
-    let rand_uuid_key = Uuid::new_v4().to_string();
-    let cloned_uuid_key = rand_uuid_key.clone();
-    session.keeper.add(rand_uuid_key, url, username, password);
+    let rand_uniqid = Uuid::new_v4().to_string();
+    let privacy_id = rand_uniqid.clone();
+    session.keeper.add(rand_uniqid, url, username, password);
     disk_dump(session)?;
-    Ok(cloned_uuid_key)
+    Ok(privacy_id)
 }
 
 #[tauri::command]
 pub fn update_privacy(
-    uuid_key: String,
+    uniqid: String,
     url: String,
     username: String,
     password: String,
     session_mutex: State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<bool, Error> {
-    if uuid_key.is_empty() || url.is_empty() || username.is_empty() || password.is_empty() {
+    if uniqid.is_empty() || url.is_empty() || username.is_empty() || password.is_empty() {
         return Err(Error::InvalidReader);
     }
+    println!("[robo-pass] Updating privacy by {0}", uniqid);
     let mut session_guard = session_mutex.lock()?;
     let session = session_guard.as_mut().ok_or(Error::InvalidReader)?;
-    session.keeper.update(&uuid_key, url, username, password);
+    session.keeper.update(&uniqid, url, username, password);
     disk_dump(session)?;
     Ok(true)
 }
@@ -154,6 +156,21 @@ pub fn fetch_privacy_heap(
     let heap = session.keeper.heap.clone();
     println!("[robo-pass] Fetching privacy data {:?}", heap);
     Ok(session.keeper.heap.clone())
+}
+
+#[tauri::command]
+pub fn remove_privacy(
+    uniqid: String,
+    session_mutex: State<'_, Mutex<Option<UserSession>>>,
+) -> Result<(), Error> {
+    println!("[robo-pass] Removing privacy by {0}", uniqid);
+    let mut session_guard = session_mutex.lock()?;
+    let session = session_guard.as_mut().ok_or(Error::InvalidReader)?;
+    if !session.keeper.remove(&uniqid) {
+        return Err(Error::InvalidParameter);
+    }
+    disk_dump(session)?;
+    Ok(())
 }
 
 #[tauri::command]

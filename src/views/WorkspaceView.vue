@@ -6,29 +6,50 @@ import CredentialBox from "../components/CredentialBox.vue";
 import AddCredentialModal from "../components/AddCredentialModal.vue";
 import { Credential } from "../types";
 
+enum EditionMode {
+  Create = 0x01,
+  Update = 0x02,
+}
+
 const router = useRouter();
 const state = reactive({
   addCredentialDialogVisible: false,
   dialog: {
+    credentialID: "",
     url: "",
     username: "",
     password: "",
+    mode: undefined,
   },
   credentialsSharedMemory: new Map<String, Credential>(),
-  lastCredentialModifications: new Array<String>(),
+  lastCredentialModifications: new Set<String>(),
   infoBoard: "",
   validatorBox: "",
 });
 
-function openCredentialDialog() {
+function openCredentialDialog(uniqid: String | null) {
   state.addCredentialDialogVisible = true;
+  state.validatorBox = "";
+  if (!uniqid) {
+    state.dialog.mode = EditionMode.Create;
+  }
+  if (typeof uniqid === "string") {
+    let { url, username, password } = state.credentialsSharedMemory.get(uniqid);
+    state.dialog.credentialID = uniqid;
+    state.dialog.url = url;
+    state.dialog.username = username;
+    state.dialog.password = password;
+    state.dialog.mode = EditionMode.Update;
+  }
 }
 
 function closeCredentialDialog() {
   state.validatorBox = "";
+  state.dialog.credentialID = "";
   state.dialog.url = "";
   state.dialog.username = "";
   state.dialog.password = "";
+  state.dialog.mode = undefined;
   state.addCredentialDialogVisible = false;
 }
 
@@ -44,23 +65,45 @@ async function fetchKeeperCredentials() {
   }
 }
 
-async function addKeeperCredential() {
+async function saveKeeperCredential() {
   let url = state.dialog.url;
   let username = state.dialog.username;
   let password = state.dialog.password;
 
   try {
-    state.validatorBox = "";
-    const uuid: String = await invoke("add_privacy", {
-      url,
-      username,
-      password,
-    });
-    state.lastCredentialModifications.push(uuid);
+    if (state.dialog.mode == EditionMode.Create) {
+      state.dialog.credentialID = await invoke("add_privacy", {
+        url,
+        username,
+        password,
+      });
+    } else if (state.dialog.mode == EditionMode.Update) {
+      let uniqid = state.dialog.credentialID;
+      await invoke("update_privacy", {
+        uniqid,
+        url,
+        username,
+        password,
+      });
+    } else {
+      return;
+    }
+    state.lastCredentialModifications.add(state.dialog.credentialID);
     fetchKeeperCredentials();
     closeCredentialDialog();
   } catch (e: any) {
-    state.validatorBox = e.error || "Error inserting credentials";
+    state.validatorBox = e;
+  }
+}
+
+async function removeKeeperCredential(uniqid: String) {
+  try {
+    await invoke("remove_privacy", {
+      uniqid,
+    });
+    state.credentialsSharedMemory.delete(uniqid);
+  } catch (e: any) {
+    state.infoBoard = e.error || "Error removing credentials";
   }
 }
 
@@ -93,8 +136,26 @@ onMounted(() => {
         ] in state.credentialsSharedMemory"
         :key="key"
       >
-        <CredentialBox :url="url" :username="username" :password="password" 
-        :class="[state.lastCredentialModifications.includes(key) ? 'active-credential__box' : '']" />
+        <CredentialBox
+          :url="url"
+          :username="username"
+          :password="password"
+          :class="[
+            state.lastCredentialModifications.has(key)
+              ? 'active-credential__box'
+              : '',
+          ]"
+          @on-edit="
+            () => {
+              openCredentialDialog(key);
+            }
+          "
+          @on-remove="
+            () => {
+              removeKeeperCredential(key);
+            }
+          "
+        />
       </template>
     </div>
 
@@ -102,10 +163,13 @@ onMounted(() => {
       <template v-slot:body>
         <form
           class="add-credential__form_box"
-          @submit.prevent="addKeeperCredential"
+          @submit.prevent="saveKeeperCredential"
         >
           <input v-model="state.dialog.url" placeholder="Enter a url..." />
-          <input v-model="state.dialog.username" placeholder="Enter an username..." />
+          <input
+            v-model="state.dialog.username"
+            placeholder="Enter an username..."
+          />
           <input
             v-model="state.dialog.password"
             placeholder="Enter a password..."
@@ -185,6 +249,6 @@ onMounted(() => {
 }
 
 .active-credential__box {
-  border: 1px solid #4FFFB0;
+  border: 1px solid #4fffb0;
 }
 </style>

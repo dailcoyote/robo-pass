@@ -11,12 +11,14 @@
           style="margin-right: 12px"
           width="24"
           height="24"
+          @click="emit('onEdit')"
         />
         <img
           class="remove-icon"
           src="../assets/delete.png"
           width="24"
           height="24"
+          @click="emit('onRemove')"
         />
       </div>
     </div>
@@ -32,9 +34,11 @@
 
 <script setup lang="ts">
 import { Credential } from "../types";
-import { defineProps } from "vue";
+import { defineProps, defineEmits } from "vue";
 
+const emit = defineEmits(['onEdit', 'onRemove'])
 const props = defineProps<Credential>();
+
 </script>
 
 <style scoped>
@@ -71,7 +75,7 @@ const props = defineProps<Credential>();
   transition: 0.5s;
 }
 .privacy-icon:hover {
-  filter: drop-shadow(0 0 2em #ffc130);
+  filter: drop-shadow(0 0 2.5em #ffc130);
 }
 
 .remove-icon {
@@ -80,6 +84,6 @@ const props = defineProps<Credential>();
   transition: 0.5s;
 }
 .remove-icon:hover {
-  filter: drop-shadow(0 0 2em #e34234);
+  filter: drop-shadow(0 2em 3em rgb(158, 86, 86));
 }
 </style>
