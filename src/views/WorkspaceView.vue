@@ -7,6 +7,7 @@ import AddCredentialModal from "../components/AddCredentialModal.vue";
 import { Credential } from "../types";
 
 enum EditionMode {
+  Non = 0x00,
   Create = 0x01,
   Update = 0x02,
 }
@@ -19,28 +20,35 @@ const state = reactive({
     url: "",
     username: "",
     password: "",
-    mode: undefined,
+    mode: EditionMode.Non,
   },
-  credentialsSharedMemory: new Map<String, Credential>(),
-  lastCredentialModifications: new Set<String>(),
+  credentialsSharedMemory: new Map<string, Credential>(),
+  lastCredentialModifications: new Set<string>(),
   infoBoard: "",
   validatorBox: "",
 });
 
-function openCredentialDialog(uniqid: String | null) {
-  state.addCredentialDialogVisible = true;
+function openCredentialDialog(uniqid: string | null) {
   state.validatorBox = "";
   if (!uniqid) {
     state.dialog.mode = EditionMode.Create;
   }
   if (typeof uniqid === "string") {
-    let { url, username, password } = state.credentialsSharedMemory.get(uniqid);
+    let credential: Credential | undefined =
+      state.credentialsSharedMemory.get(uniqid);
+    if (credential === undefined) {
+      state.infoBoard = "Credential not found";
+      return;
+    }
+
     state.dialog.credentialID = uniqid;
-    state.dialog.url = url;
-    state.dialog.username = username;
-    state.dialog.password = password;
+    state.dialog.url = credential.url;
+    state.dialog.username = credential.username;
+    state.dialog.password = credential.password;
     state.dialog.mode = EditionMode.Update;
   }
+
+  state.addCredentialDialogVisible = true;
 }
 
 function closeCredentialDialog() {
@@ -49,7 +57,7 @@ function closeCredentialDialog() {
   state.dialog.url = "";
   state.dialog.username = "";
   state.dialog.password = "";
-  state.dialog.mode = undefined;
+  state.dialog.mode = EditionMode.Non;
   state.addCredentialDialogVisible = false;
 }
 
@@ -57,7 +65,7 @@ async function fetchKeeperCredentials() {
   try {
     state.credentialsSharedMemory.clear();
     const heap: Object = await invoke("fetch_privacy_heap");
-    state.credentialsSharedMemory = new Map<String, Credential>(
+    state.credentialsSharedMemory = new Map<string, Credential>(
       Object.entries(heap)
     );
   } catch (e: any) {
@@ -96,7 +104,7 @@ async function saveKeeperCredential() {
   }
 }
 
-async function removeKeeperCredential(uniqid: String) {
+async function removeKeeperCredential(uniqid: string) {
   try {
     await invoke("remove_privacy", {
       uniqid,
@@ -120,7 +128,7 @@ onMounted(() => {
 <template>
   <div class="container">
     <div id="credential--toolbar">
-      <button id="add_credential--button" @click="openCredentialDialog()">
+      <button id="add_credential--button" @click="openCredentialDialog(null)">
         Add Credentials
       </button>
       <button id="logout--button" @click="logout()">Logout</button>

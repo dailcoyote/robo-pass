@@ -1,5 +1,5 @@
 export type Credential = {
-    url: String,
-    username: String,
-    password: String
+    url: string,
+    username: string,
+    password: string
 }
