@@ -60,6 +60,22 @@ impl Keeper {
         self.heap.remove(uuid_key).is_some()
     }
 
+    pub fn update(&mut self, uuid_key: &String, url: String, username: String, password: String) {
+        match self.heap.get_mut(uuid_key) {
+            Some(privacy) => {
+                *privacy = Privacy {
+                    url,
+                    username,
+                    password,
+                }
+            } // If the key exists, update the value
+            None => println!(
+                "[robo-pass] UUID Key '{}' does not exist in the HashMap.",
+                uuid_key
+            ), // If the key does not exist, print a message
+        }
+    }
+
     pub fn entry(&self, uuid_key: &str) -> Option<&Privacy> {
         self.heap.get(uuid_key)
     }
@@ -112,10 +128,27 @@ pub fn add_privacy(
 }
 
 #[tauri::command]
+pub fn update_privacy(
+    uuid_key: String,
+    url: String,
+    username: String,
+    password: String,
+    session_mutex: State<'_, Mutex<Option<UserSession>>>,
+) -> Result<bool, Error> {
+    if uuid_key.is_empty() || url.is_empty() || username.is_empty() || password.is_empty() {
+        return Err(Error::InvalidReader);
+    }
+    let mut session_guard = session_mutex.lock()?;
+    let session = session_guard.as_mut().ok_or(Error::InvalidReader)?;
+    session.keeper.update(&uuid_key, url, username, password);
+    disk_dump(session)?;
+    Ok(true)
+}
+
+#[tauri::command]
 pub fn fetch_privacy_heap(
     session_mutex: State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<HashMap<String, Privacy>, Error> {
-  
     let session_guard = session_mutex.lock()?;
     let session = session_guard.as_ref().ok_or(Error::InvalidReader)?;
     let heap = session.keeper.heap.clone();
@@ -132,7 +165,10 @@ pub fn create_account(
     if username.is_empty() || password.is_empty() {
         return Err(Error::InvalidKeeper);
     }
-    println!("[robo-pass] Creating an account... {0}. {1},", username, password);
+    println!(
+        "[robo-pass] Creating an account... {0}. {1},",
+        username, password
+    );
     let mut session = session.lock()?;
     if session.is_some() {
         println!("[robo-pass] Session exists");
@@ -201,7 +237,7 @@ pub fn login(
         nonce,
         encrypted_key,
         key,
-        keeper
+        keeper,
     });
     println!("[robo-pass] {0} logged", username);
     Ok(())
@@ -209,9 +245,8 @@ pub fn login(
 
 #[tauri::command]
 pub fn logout(session: State<'_, Mutex<Option<UserSession>>>) -> Result<(), Error> {
-  let mut session = session.lock()?;
-  println!("[robo-pass] Logging out {0}", logged_in=session.is_some());
-  *session = None;
-  Ok(())
+    let mut session = session.lock()?;
+    println!("[robo-pass] Logging out {0}", logged_in = session.is_some());
+    *session = None;
+    Ok(())
 }
-

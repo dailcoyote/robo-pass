@@ -11,6 +11,7 @@ use std::fs;
 use std::sync::Mutex;
 
 use kernel::add_privacy;
+use kernel::update_privacy;
 use kernel::create_account;
 use kernel::fetch_privacy_heap;
 use kernel::login;
@@ -28,6 +29,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             create_account,
             add_privacy,
+            update_privacy,
             fetch_privacy_heap,
             login,
             logout

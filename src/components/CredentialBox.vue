@@ -1,7 +1,24 @@
 <template>
   <div class="credential--box">
     <div class="credential--box__item">
-      <img src="../assets/icons8-account-32.png" />
+      <div>
+        <img src="../assets/icons8-account-32.png" width="24" height="24" />
+      </div>
+      <div>
+        <img
+          class="privacy-icon"
+          src="../assets/privacy.png"
+          style="margin-right: 12px"
+          width="24"
+          height="24"
+        />
+        <img
+          class="remove-icon"
+          src="../assets/delete.png"
+          width="24"
+          height="24"
+        />
+      </div>
     </div>
     <div class="credential--box__item">{{ props.url }}</div>
     <div class="credential--box__item" style="margin-top: 8px">
@@ -35,7 +52,7 @@ const props = defineProps<Credential>();
   transition: border-color 0.25s;
   opacity: 0.92;
   outline: none;
-  cursor: pointer;
+  /* cursor: pointer; */
   will-change: filter;
   transition: 0.5s;
 }
@@ -44,7 +61,25 @@ const props = defineProps<Credential>();
 }
 .credential--box__item {
   display: flex;
-  justify-content: start;
+  justify-content: space-between;
   margin-bottom: 8px;
+}
+
+.privacy-icon {
+  cursor: pointer;
+  will-change: filter;
+  transition: 0.5s;
+}
+.privacy-icon:hover {
+  filter: drop-shadow(0 0 2em #ffc130);
+}
+
+.remove-icon {
+  cursor: pointer;
+  will-change: filter;
+  transition: 0.5s;
+}
+.remove-icon:hover {
+  filter: drop-shadow(0 0 2em #e34234);
 }
 </style>

@@ -47,9 +47,9 @@ export default defineComponent({
   overflow-x: auto;
   display: flex;
   flex-direction: column;
-  width: 600px;
-  height: 600px;
-  background: no-repeat url('../assets/lord.jpg');
+  width: 650px;
+  height: 650px;
+  background: no-repeat url('../assets/crypto_security_texture.jpg');
   background-size: cover;
 }
 
