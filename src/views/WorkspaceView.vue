@@ -181,9 +181,9 @@ onMounted(() => {
               Cancel
             </button>
           </div>
-          <p class="alert" v-show="state.validatorBox">
-            {{ state.validatorBox }}
-          </p>
+          <div v-show="state.validatorBox" class="alert">
+            <p>{{ state.validatorBox }}</p>
+          </div>
         </form>
       </template>
     </AddCredentialModal>

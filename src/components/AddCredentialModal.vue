@@ -47,8 +47,8 @@ export default defineComponent({
   overflow-x: auto;
   display: flex;
   flex-direction: column;
-  width: 650px;
-  height: 650px;
+  width: 700px;
+  height: 700px;
   background: no-repeat url('../assets/crypto_security_texture.jpg');
   background-size: cover;
 }

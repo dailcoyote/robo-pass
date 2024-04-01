@@ -61,7 +61,9 @@ async function create() {
         required
       />
       <button type="submit" id="create-btn" @click="create()">Create</button>
-      <p class="alert" v-show="errMsg">{{ errMsg }}</p>
+      <div v-show="errMsg" class="alert">
+        <p>{{ errMsg }}</p>
+      </div>
     </form>
   </div>
 </template>
