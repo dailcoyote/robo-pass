@@ -4,7 +4,7 @@ import { reactive, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import CredentialBox from "../components/CredentialBox.vue";
 import AddCredentialModal from "../components/AddCredentialModal.vue";
-import { Credential } from "../types";
+import { Credential, KeeperCredential } from "../types";
 
 enum EditionMode {
   Non = 0x00,
@@ -22,9 +22,9 @@ const state = reactive({
     password: "",
     mode: EditionMode.Non,
   },
-  credentialsSharedMemory: new Map<string, Credential>(),
+  keeperCredentialsSharedVector: new Array<KeeperCredential>(),
   lastCredentialModifications: new Set<string>(),
-  infoBoard: "",
+  infoBox: "",
   validatorBox: "",
 });
 
@@ -35,9 +35,12 @@ function openCredentialDialog(uniqid: string | null) {
   }
   if (typeof uniqid === "string") {
     let credential: Credential | undefined =
-      state.credentialsSharedMemory.get(uniqid);
-    if (credential === undefined) {
-      state.infoBoard = "Credential not found";
+      state.keeperCredentialsSharedVector.find(
+        (item: KeeperCredential) => item.keeper_id == uniqid
+      )?.privacy || undefined;
+
+    if (!credential) {
+      state.infoBox = "Credential not found";
       return;
     }
 
@@ -52,7 +55,6 @@ function openCredentialDialog(uniqid: string | null) {
 }
 
 function closeCredentialDialog() {
-  state.validatorBox = "";
   state.dialog.credentialID = "";
   state.dialog.url = "";
   state.dialog.username = "";
@@ -61,15 +63,14 @@ function closeCredentialDialog() {
   state.addCredentialDialogVisible = false;
 }
 
-async function fetchKeeperCredentials() {
+async function fetchSortedKeeperCredentials() {
   try {
-    state.credentialsSharedMemory.clear();
-    const heap: Object = await invoke("fetch_privacy_heap");
-    state.credentialsSharedMemory = new Map<string, Credential>(
-      Object.entries(heap)
+    const heap: Array<KeeperCredential> = await invoke(
+      "fetch_sorted_privacy_vec"
     );
+    state.keeperCredentialsSharedVector = [...heap];
   } catch (e: any) {
-    state.infoBoard = e.error || "Error reading credentials";
+    state.infoBox = e.error || "Error reading credentials";
   }
 }
 
@@ -94,10 +95,10 @@ async function saveKeeperCredential() {
         password,
       });
     } else {
-      return;
+      throw new Error("EditionMode Not Found");
     }
     state.lastCredentialModifications.add(state.dialog.credentialID);
-    fetchKeeperCredentials();
+    fetchSortedKeeperCredentials();
     closeCredentialDialog();
   } catch (e: any) {
     state.validatorBox = e;
@@ -109,19 +110,21 @@ async function removeKeeperCredential(uniqid: string) {
     await invoke("remove_privacy", {
       uniqid,
     });
-    state.credentialsSharedMemory.delete(uniqid);
+    fetchSortedKeeperCredentials();
   } catch (e: any) {
-    state.infoBoard = e.error || "Error removing credentials";
+    state.infoBox = e.error || "Error removing credentials";
   }
 }
 
 function logout() {
+  state.lastCredentialModifications.clear();
+  state.keeperCredentialsSharedVector = [];
   invoke("logout");
   router.push("/");
 }
 
 onMounted(() => {
-  fetchKeeperCredentials();
+  fetchSortedKeeperCredentials();
 });
 </script>
 
@@ -134,33 +137,32 @@ onMounted(() => {
       <button id="logout--button" @click="logout()">Logout</button>
     </div>
 
-    {{ state.infoBoard }}
+    <div class="infoBox">
+      <p v-show="state.infoBox">{{ state.infoBox }}</p>
+    </div>
 
     <div class="credential--box-list">
       <template
-        v-for="[
-          key,
-          { url, username, password },
-        ] in state.credentialsSharedMemory"
-        :key="key"
+        v-for="{ keeper_id, privacy } in state.keeperCredentialsSharedVector"
+        :key="keeper_id"
       >
         <CredentialBox
-          :url="url"
-          :username="username"
-          :password="password"
+          :url="privacy.url"
+          :username="privacy.username"
+          :password="privacy.password"
           :class="[
-            state.lastCredentialModifications.has(key)
+            state.lastCredentialModifications.has(keeper_id)
               ? 'active-credential__box'
               : '',
           ]"
           @on-edit="
             () => {
-              openCredentialDialog(key);
+              openCredentialDialog(keeper_id);
             }
           "
           @on-remove="
             () => {
-              removeKeeperCredential(key);
+              removeKeeperCredential(keeper_id);
             }
           "
         />
@@ -189,7 +191,7 @@ onMounted(() => {
               Cancel
             </button>
           </div>
-          <div v-show="state.validatorBox" class="alert">
+          <div v-show="state.validatorBox" class="alertBox">
             <p>{{ state.validatorBox }}</p>
           </div>
         </form>

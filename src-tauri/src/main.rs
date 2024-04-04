@@ -13,7 +13,7 @@ use std::sync::Mutex;
 use kernel::add_privacy;
 use kernel::update_privacy;
 use kernel::create_account;
-use kernel::fetch_privacy_heap;
+use kernel::fetch_sorted_privacy_vec;
 use kernel::remove_privacy;
 use kernel::login;
 use kernel::logout;
@@ -32,7 +32,7 @@ fn main() {
             create_account,
             add_privacy,
             update_privacy,
-            fetch_privacy_heap,
+            fetch_sorted_privacy_vec,
             remove_privacy,
             login,
             logout,

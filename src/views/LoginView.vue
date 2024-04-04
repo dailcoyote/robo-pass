@@ -50,7 +50,7 @@ async function onNavigateToCreate() {
       <button class="white-effect" @click="onNavigateToCreate">
         Create an account
       </button>
-      <div v-show="errMsg" class="alert">
+      <div v-show="errMsg" class="alertBox">
         <p>{{ errMsg }}</p>
       </div>
     </form>

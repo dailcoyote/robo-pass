@@ -3,3 +3,8 @@ export type Credential = {
     username: string,
     password: string
 }
+
+export type KeeperCredential = {
+    keeper_id: string,
+    privacy: Credential
+}

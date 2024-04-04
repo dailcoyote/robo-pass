@@ -29,6 +29,12 @@ pub struct Privacy {
 }
 
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
+pub struct PrivacySerialize {
+    pub keeper_id: String,
+    pub privacy: Privacy,
+}
+
+#[derive(Default, Debug, Serialize, Deserialize, Clone)]
 pub struct Keeper {
     pub username: String,
     pub heap: HashMap<String, Privacy>,
@@ -148,14 +154,30 @@ pub fn update_privacy(
 }
 
 #[tauri::command]
-pub fn fetch_privacy_heap(
+pub fn fetch_sorted_privacy_vec(
     session_mutex: State<'_, Mutex<Option<UserSession>>>,
-) -> Result<HashMap<String, Privacy>, Error> {
+) -> Result<Vec<PrivacySerialize>, Error> {
     let session_guard = session_mutex.lock()?;
     let session = session_guard.as_ref().ok_or(Error::InvalidReader)?;
-    let heap = session.keeper.heap.clone();
-    println!("[robo-pass] Fetching privacy data {:?}", heap);
-    Ok(session.keeper.heap.clone())
+    println!(
+        "[robo-pass] Fetching privacy data by keeper {:?}",
+        session.keeper.username
+    );
+    let mut sorted_privacy_vec: Vec<PrivacySerialize> = session
+        .keeper
+        .entries()
+        .map(|(keeper_id, privacy)| PrivacySerialize {
+            keeper_id: keeper_id.to_string(),
+            privacy: Privacy {
+                url: privacy.url.to_string(),
+                username: privacy.username.to_string(),
+                password: privacy.password.to_string(),
+            },
+        })
+        .collect();
+    sorted_privacy_vec.sort_by(|a, b| a.privacy.url.cmp(&b.privacy.url));
+
+    Ok(sorted_privacy_vec.clone())
 }
 
 #[tauri::command]
