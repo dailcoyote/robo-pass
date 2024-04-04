@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { reactive, onMounted, computed } from "vue";
 import { invoke } from "@tauri-apps/api/tauri";
-import { reactive, onMounted } from "vue";
+import { useSnackbar } from "vue3-snackbar";
 import { useRouter } from "vue-router";
 import CredentialBox from "../components/CredentialBox.vue";
 import AddCredentialModal from "../components/AddCredentialModal.vue";
@@ -12,6 +13,7 @@ enum EditionMode {
   Update = 0x02,
 }
 
+const snackbar = useSnackbar();
 const router = useRouter();
 const state = reactive({
   addCredentialDialogVisible: false,
@@ -24,8 +26,13 @@ const state = reactive({
   },
   keeperCredentialsSharedVector: new Array<KeeperCredential>(),
   lastCredentialModifications: new Set<string>(),
-  infoBox: "",
   validatorBox: "",
+});
+
+const credentialModalActionButtonLabel = computed(() => {
+  if (state.dialog.mode === EditionMode.Create) return "Create";
+  if (state.dialog.mode === EditionMode.Update) return "Save";
+  return "Locked";
 });
 
 function openCredentialDialog(uniqid: string | null) {
@@ -40,7 +47,10 @@ function openCredentialDialog(uniqid: string | null) {
       )?.privacy || undefined;
 
     if (!credential) {
-      state.infoBox = "Credential not found";
+      snackbar.add({
+        type: "warning",
+        text: "Credential not found",
+      });
       return;
     }
 
@@ -70,7 +80,10 @@ async function fetchSortedKeeperCredentials() {
     );
     state.keeperCredentialsSharedVector = [...heap];
   } catch (e: any) {
-    state.infoBox = e.error || "Error reading credentials";
+    snackbar.add({
+      type: "error",
+      text: e.error || "Error reading credentials",
+    });
   }
 }
 
@@ -98,6 +111,10 @@ async function saveKeeperCredential() {
       throw new Error("EditionMode Not Found");
     }
     state.lastCredentialModifications.add(state.dialog.credentialID);
+    snackbar.add({
+      type: "success",
+      text: "Data saved to disk",
+    });
     fetchSortedKeeperCredentials();
     closeCredentialDialog();
   } catch (e: any) {
@@ -110,9 +127,16 @@ async function removeKeeperCredential(uniqid: string) {
     await invoke("remove_privacy", {
       uniqid,
     });
+    snackbar.add({
+      type: "success",
+      text: "Data saved to disk",
+    });
     fetchSortedKeeperCredentials();
   } catch (e: any) {
-    state.infoBox = e.error || "Error removing credentials";
+    snackbar.add({
+      type: "error",
+      text: e.error || "Error removing credentials",
+    });
   }
 }
 
@@ -135,10 +159,6 @@ onMounted(() => {
         Add Credentials
       </button>
       <button id="logout--button" @click="logout()">Logout</button>
-    </div>
-
-    <div class="infoBox">
-      <p v-show="state.infoBox">{{ state.infoBox }}</p>
     </div>
 
     <div class="credential--box-list">
@@ -186,7 +206,9 @@ onMounted(() => {
             type="password"
           />
           <div class="row">
-            <button class="bluesky-effect" type="submit">Create</button>
+            <button class="bluesky-effect" type="submit">
+              {{ credentialModalActionButtonLabel }}
+            </button>
             <button class="vermillion-effect" @click="closeCredentialDialog()">
               Cancel
             </button>

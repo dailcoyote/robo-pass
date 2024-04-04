@@ -43,8 +43,8 @@ const props = defineProps<Credential>();
 
 <style scoped>
 .credential--box {
-  width: 320px;
-  height: 160px;
+  width: 360px;
+  height: 180px;
   margin: 24px 24px 0 0;
   border-radius: 8px;
   padding: 20px 15px 0 15px;
