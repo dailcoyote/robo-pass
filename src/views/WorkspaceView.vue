@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { reactive, onMounted, computed } from "vue";
 import { invoke } from "@tauri-apps/api/tauri";
-import { useSnackbar } from "vue3-snackbar";
 import { useRouter } from "vue-router";
+import Snackbar from "awesome-snackbar";
 import CredentialBox from "../components/CredentialBox.vue";
 import AddCredentialModal from "../components/AddCredentialModal.vue";
 import { Credential, KeeperCredential } from "../types";
+
+enum TypeMessages {
+  Warning = "w",
+  Error = "e",
+  Success = "s",
+}
 
 enum EditionMode {
   Non = 0x00,
@@ -13,7 +19,6 @@ enum EditionMode {
   Update = 0x02,
 }
 
-const snackbar = useSnackbar();
 const router = useRouter();
 const state = reactive({
   addCredentialDialogVisible: false,
@@ -35,6 +40,31 @@ const credentialModalActionButtonLabel = computed(() => {
   return "Locked";
 });
 
+/****   UI ACTIONS  ****/
+function displaySnackbar(msg: string, type: TypeMessages) {
+  let sb = new Snackbar(msg, {
+    position: "bottom-right",
+    timeout: 5000,
+  });
+
+  let sbBackgroundColor: string = "";
+
+  if (type === TypeMessages.Error) {
+    sbBackgroundColor = "#FF5733";
+  } else if (type === TypeMessages.Warning) {
+    sbBackgroundColor = "#ED820E";
+  } else if (type === TypeMessages.Success) {
+    sbBackgroundColor = "#5F9EA0";
+  } else {
+    sbBackgroundColor = "#000000";
+  }
+
+  sb.setStyle({
+    container: [["background-color", sbBackgroundColor]],
+    message: [["color", "#ffffff"]],
+  });
+}
+
 function openCredentialDialog(uniqid: string | null) {
   state.validatorBox = "";
   if (!uniqid) {
@@ -47,10 +77,7 @@ function openCredentialDialog(uniqid: string | null) {
       )?.privacy || undefined;
 
     if (!credential) {
-      snackbar.add({
-        type: "warning",
-        text: "Credential not found",
-      });
+      displaySnackbar("Credential not found", TypeMessages.Warning);
       return;
     }
 
@@ -73,6 +100,7 @@ function closeCredentialDialog() {
   state.addCredentialDialogVisible = false;
 }
 
+/****   IPC ACTIONS  ****/
 async function fetchSortedKeeperCredentials() {
   try {
     const heap: Array<KeeperCredential> = await invoke(
@@ -80,10 +108,7 @@ async function fetchSortedKeeperCredentials() {
     );
     state.keeperCredentialsSharedVector = [...heap];
   } catch (e: any) {
-    snackbar.add({
-      type: "error",
-      text: e.error || "Error reading credentials",
-    });
+    displaySnackbar(e.error || "Error reading credentials", TypeMessages.Error);
   }
 }
 
@@ -111,10 +136,7 @@ async function saveKeeperCredential() {
       throw new Error("EditionMode Not Found");
     }
     state.lastCredentialModifications.add(state.dialog.credentialID);
-    snackbar.add({
-      type: "success",
-      text: "Data saved to disk",
-    });
+    displaySnackbar("Data saved to disk", TypeMessages.Success);
     fetchSortedKeeperCredentials();
     closeCredentialDialog();
   } catch (e: any) {
@@ -127,23 +149,20 @@ async function removeKeeperCredential(uniqid: string) {
     await invoke("remove_privacy", {
       uniqid,
     });
-    snackbar.add({
-      type: "success",
-      text: "Data saved to disk",
-    });
+    displaySnackbar("Data saved to disk", TypeMessages.Success);
     fetchSortedKeeperCredentials();
   } catch (e: any) {
-    snackbar.add({
-      type: "error",
-      text: e.error || "Error removing credentials",
-    });
+    displaySnackbar(
+      e.error || "Error removing credentials",
+      TypeMessages.Error
+    );
   }
 }
 
-function logout() {
+async function logout() {
   state.lastCredentialModifications.clear();
   state.keeperCredentialsSharedVector = [];
-  invoke("logout");
+  await invoke("logout");
   router.push("/");
 }
 

@@ -1,9 +1,7 @@
 import { createApp } from "vue";
 import { invoke } from "@tauri-apps/api/tauri";
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { SnackbarService, Vue3Snackbar } from "vue3-snackbar";
 import "./styles.css";
-import "vue3-snackbar/dist/style.css";
 import App from "./App.vue";
 
 import LoginView from './views/LoginView.vue'
@@ -27,19 +25,26 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to: any) => {
+    let isAuth = await canUserAccess();
+
     if (
         // make sure the user is authenticated
-        !await canUserAccess() &&
+        !isAuth &&
         // ❗️ Avoid an infinite redirect
         to.name === 'workspace'
     ) {
         // redirect the user to the login page
         return { name: 'login' }
     }
+    if (
+        isAuth &&
+        (to.name === 'login' || to.name === 'signup')
+    ) {
+        // redirect the user to the workspace page
+        return { name: 'workspace' }
+    }
 })
 
 const app = createApp(App);
 app.use(router);
-app.use(SnackbarService);
-app.component("vue3-snackbar", Vue3Snackbar);
 app.mount("#app");
