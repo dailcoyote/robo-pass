@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::State;
 use uuid::Uuid;
+use log::{debug, error, info, trace, warn};
 
 use crate::cryptography;
 use crate::cryptography::EncryptedBlob;
@@ -75,8 +76,8 @@ impl Keeper {
                     password,
                 }
             } // If the key exists, update the value
-            None => println!(
-                "[robo-pass] Unique Id '{}' does not exist in the HashMap.",
+            None => info!(
+                "Unique Id '{}' does not exist in the HashMap.",
                 uniqid
             ), // If the key does not exist, print a message
         }
@@ -101,7 +102,7 @@ pub struct UserSession {
 }
 
 fn disk_dump(session: &UserSession) -> Result<(), Error> {
-    println!("[robo-pass] Keeper dump {:?}", session.keeper);
+    info!("Keeper dump {:?}", session.keeper);
     let encrypted_blob = EncryptedBlob::encrypt(&session.keeper, &session.key)?;
     let file_content = session
         .nonce
@@ -124,7 +125,7 @@ pub fn add_privacy(
     if url.is_empty() || username.is_empty() || password.is_empty() {
         return Err(Error::InvalidReader);
     }
-    println!("[robo-pass] Adding privacy");
+    info!("Adding privacy");
     let mut session_guard = session_mutex.lock()?;
     let session = session_guard.as_mut().ok_or(Error::InvalidReader)?;
     let rand_uniqid = Uuid::new_v4().to_string();
@@ -145,7 +146,7 @@ pub fn update_privacy(
     if uniqid.is_empty() || url.is_empty() || username.is_empty() || password.is_empty() {
         return Err(Error::InvalidReader);
     }
-    println!("[robo-pass] Updating privacy by {0}", uniqid);
+    info!("Updating privacy by {0}", uniqid);
     let mut session_guard = session_mutex.lock()?;
     let session = session_guard.as_mut().ok_or(Error::InvalidReader)?;
     session.keeper.update(&uniqid, url, username, password);
@@ -159,8 +160,8 @@ pub fn fetch_sorted_privacy_vec(
 ) -> Result<Vec<PrivacySerialize>, Error> {
     let session_guard = session_mutex.lock()?;
     let session = session_guard.as_ref().ok_or(Error::InvalidReader)?;
-    println!(
-        "[robo-pass] Fetching privacy data by keeper {:?}",
+    info!(
+        "Fetching privacy data by keeper {:?}",
         session.keeper.username
     );
     let mut sorted_privacy_vec: Vec<PrivacySerialize> = session
@@ -185,7 +186,7 @@ pub fn remove_privacy(
     uniqid: String,
     session_mutex: State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<(), Error> {
-    println!("[robo-pass] Removing privacy by {0}", uniqid);
+    info!("Removing privacy by {0}", uniqid);
     let mut session_guard = session_mutex.lock()?;
     let session = session_guard.as_mut().ok_or(Error::InvalidReader)?;
     if !session.keeper.remove(&uniqid) {
@@ -204,13 +205,13 @@ pub fn create_account(
     if username.is_empty() || password.is_empty() {
         return Err(Error::InvalidKeeper);
     }
-    println!(
-        "[robo-pass] Creating an account... {0}. {1},",
+    info!(
+        "Creating an account... {0}. {1},",
         username, password
     );
     let mut session = session.lock()?;
     if session.is_some() {
-        println!("[robo-pass] Session exists");
+        warn!("Session exists");
         return Err(Error::Unexpected);
     }
     let file = APP_FOLDER.join(format!("{username}.pwdb"));
@@ -229,7 +230,7 @@ pub fn create_account(
         keeper,
     });
     disk_dump(session.as_ref().unwrap())?;
-    println!("[robo-pass] An account created");
+    warn!("An account created");
     Ok(())
 }
 
@@ -239,23 +240,23 @@ pub fn login(
     password: String,
     session: State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<(), Error> {
-    println!("[robo-pass] Logging in {0}", username);
+    info!("Logging in {0}", username);
     if username.is_empty() || password.is_empty() {
         return Err(Error::InvalidKeeper);
     }
     let mut session = session.lock()?;
     if session.is_some() {
-        println!("[robo-pass] Session exists");
+        warn!("Session exists");
         return Err(Error::Unexpected);
     }
     let file = APP_FOLDER.join(format!("{username}.pwdb"));
     if !file.exists() {
-        println!("[robo-pass] File doesn't exist");
+        error!("File doesn't exist");
         return Err(Error::InvalidKeeper);
     }
     let file_contents = fs::read(&file)?;
     if file_contents.len() < 16 + 32 + 1 {
-        println!("[robo-pass] Broken bytes");
+        error!("Broken bytes");
         return Err(Error::InvalidReader);
     }
     let nonce: [u8; 16] = file_contents[..16].try_into().unwrap();
@@ -267,10 +268,13 @@ pub fn login(
         .decrypt(&key)
         .map_err(|_| Error::InvalidKeeper)?;
     if keeper.username() != username {
-        println!("[robo-pass] User not found");
+        warn!("User not found");
         return Err(Error::InvalidReader);
     }
-    println!("[robo-pass] {:?}", keeper.clone());
+    debug!("Session |username| > {:?}", keeper.username());
+    debug!("Session |encrypted_key| {:?}", encrypted_key);
+    debug!("Session |key| {:?}", key);
+    debug!("Session |file path| {:?}", file);
     *session = Some(UserSession {
         file,
         nonce,
@@ -278,20 +282,20 @@ pub fn login(
         key,
         keeper,
     });
-    println!("[robo-pass] {0} logged", username);
+    info!("Keeper |{0}| logged", username);
     Ok(())
 }
 
 #[tauri::command]
 pub fn logout(session: State<'_, Mutex<Option<UserSession>>>) -> Result<(), Error> {
     let mut session = session.lock()?;
-    println!("[robo-pass] Logging out {0}", logged_in = session.is_some());
+    info!("Logging out {0}", logged_in = session.is_some());
     *session = None;
     Ok(())
 }
 
 #[tauri::command]
 pub fn can_user_access(session: State<'_, Mutex<Option<UserSession>>>) -> Result<bool, Error> {
-    let mut session = session.lock()?;
+    let session = session.lock()?;
     Ok(session.is_some())
 }

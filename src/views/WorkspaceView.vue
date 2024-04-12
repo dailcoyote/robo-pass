@@ -103,10 +103,9 @@ function closeCredentialDialog() {
 /****   IPC ACTIONS  ****/
 async function fetchSortedKeeperCredentials() {
   try {
-    const heap: Array<KeeperCredential> = await invoke(
+    state.keeperCredentialsSharedVector = await invoke(
       "fetch_sorted_privacy_vec"
     );
-    state.keeperCredentialsSharedVector = [...heap];
   } catch (e: any) {
     displaySnackbar(e.error || "Error reading credentials", TypeMessages.Error);
   }
@@ -192,7 +191,7 @@ onMounted(() => {
           :class="[
             state.lastCredentialModifications.has(keeper_id)
               ? 'active-credential__box'
-              : '',
+              : 'passive-credential__box',
           ]"
           @on-edit="
             () => {
@@ -301,5 +300,9 @@ onMounted(() => {
 
 .active-credential__box {
   border: 1px solid #4fffb0;
+}
+
+.passive-credential__box {
+  border: 1px solid transparent;
 }
 </style>

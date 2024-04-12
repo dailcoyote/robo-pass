@@ -6,9 +6,12 @@
 mod cryptography;
 mod error;
 mod kernel;
+mod logger;
 
 use std::fs;
 use std::sync::Mutex;
+
+use crate::logger::setup_logger;
 
 use kernel::add_privacy;
 use kernel::update_privacy;
@@ -25,6 +28,8 @@ fn main() {
     if !APP_FOLDER.exists() {
         fs::create_dir(&*APP_FOLDER).expect("failed to create app folder");
     }
+
+    let _ = setup_logger();
 
     tauri::Builder::default()
         .manage(Mutex::<Option<UserSession>>::default())

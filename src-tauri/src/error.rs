@@ -1,4 +1,4 @@
-// use crate::logs;
+use log::{error};
 use serde::{ser::SerializeMap, Serialize};
 
 #[derive(Debug, Clone, Copy)]
@@ -34,7 +34,7 @@ impl Error {
 
 impl<T: std::error::Error> From<T> for Error {
     fn from(e: T) -> Self {
-        println!("[robo-pass] Unexpected error {0}", e);
+        error!("Unexpected error {0}", e);
         Self::Unexpected
     }
 }
