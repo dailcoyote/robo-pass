@@ -23,7 +23,7 @@ const router = useRouter();
 const state = reactive({
   addCredentialDialogVisible: false,
   dialog: {
-    activeCredentialKey: null,
+    activeCredentialKey: "",
     url: "",
     username: "",
     password: "",
@@ -142,7 +142,7 @@ async function saveKeeperCredential() {
       });
 
       state.keeperCredentialsSharedVector.forEach(
-        (item: Credential, index: number) => {
+        (item: KeeperCredential, index: number) => {
           if (item.hash == state.dialog.activeCredentialKey) {
             state.keeperCredentialsSharedVector[index].credential = {
               url,
@@ -169,7 +169,7 @@ async function removeKeeperCredential(uniqueHashtag: string) {
       uniqueHashtag,
     });
     state.keeperCredentialsSharedVector = [
-      ...state.keeperCredentialsSharedVector.filter((item: Credential) => {
+      ...state.keeperCredentialsSharedVector.filter((item: KeeperCredential) => {
         return item.hash !== uniqueHashtag;
       }),
     ];
