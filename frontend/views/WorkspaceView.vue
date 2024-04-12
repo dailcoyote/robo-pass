@@ -125,7 +125,7 @@ async function saveKeeperCredential() {
         username,
         password,
       });
-      state.keeperCredentialsSharedVector.push({
+      state.keeperCredentialsSharedVector.unshift({
         hash: state.dialog.activeCredentialKey,
         credential: {
           url,
