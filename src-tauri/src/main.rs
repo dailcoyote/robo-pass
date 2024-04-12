@@ -5,14 +5,14 @@
 )]
 mod cryptography;
 mod error;
-mod kernel;
 mod logger;
+mod mem;
+mod kernel;
 
 use std::fs;
 use std::sync::Mutex;
 
-use crate::logger::setup_logger;
-
+use kernel::APP_FOLDER;
 use kernel::add_privacy;
 use kernel::update_privacy;
 use kernel::create_account;
@@ -21,8 +21,8 @@ use kernel::remove_privacy;
 use kernel::login;
 use kernel::logout;
 use kernel::can_user_access;
-use kernel::UserSession;
-use kernel::APP_FOLDER;
+use mem::UserSession;
+use crate::logger::setup_logger;
 
 fn main() {
     if !APP_FOLDER.exists() {

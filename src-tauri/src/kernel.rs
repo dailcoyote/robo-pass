@@ -1,16 +1,15 @@
+use log::{debug, error, info, trace, warn};
 use once_cell::sync::Lazy;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::State;
 use uuid::Uuid;
-use log::{debug, error, info, trace, warn};
 
 use crate::cryptography;
 use crate::cryptography::EncryptedBlob;
 use crate::error::Error;
+use crate::mem::{Keeper, Privacy, PrivacySerialize, UserSession};
 
 pub static APP_FOLDER: Lazy<PathBuf> = Lazy::new(|| {
     if cfg!(target_os = "windows") {
@@ -22,87 +21,8 @@ pub static APP_FOLDER: Lazy<PathBuf> = Lazy::new(|| {
     }
 });
 
-#[derive(Default, Debug, Hash, Serialize, Deserialize, Clone)]
-pub struct Privacy {
-    pub url: String,
-    pub username: String,
-    pub password: String,
-}
-
-#[derive(Default, Debug, Serialize, Deserialize, Clone)]
-pub struct PrivacySerialize {
-    pub keeper_id: String,
-    pub privacy: Privacy,
-}
-
-#[derive(Default, Debug, Serialize, Deserialize, Clone)]
-pub struct Keeper {
-    pub username: String,
-    pub heap: HashMap<String, Privacy>,
-}
-
-impl Keeper {
-    pub fn create(username: String) -> Self {
-        Self {
-            username,
-            ..Self::default()
-        }
-    }
-    pub fn username(&self) -> &str {
-        &self.username
-    }
-
-    pub fn add(&mut self, uniqid: String, url: String, username: String, password: String) {
-        self.heap.insert(
-            uniqid,
-            Privacy {
-                url,
-                username,
-                password,
-            },
-        );
-    }
-
-    pub fn remove(&mut self, uniqid: &str) -> bool {
-        self.heap.remove(uniqid).is_some()
-    }
-
-    pub fn update(&mut self, uniqid: &String, url: String, username: String, password: String) {
-        match self.heap.get_mut(uniqid) {
-            Some(privacy) => {
-                *privacy = Privacy {
-                    url,
-                    username,
-                    password,
-                }
-            } // If the key exists, update the value
-            None => info!(
-                "Unique Id '{}' does not exist in the HashMap.",
-                uniqid
-            ), // If the key does not exist, print a message
-        }
-    }
-
-    pub fn entry(&self, uniqid: &str) -> Option<&Privacy> {
-        self.heap.get(uniqid)
-    }
-
-    pub fn entries(&self) -> impl Iterator<Item = (&String, &Privacy)> {
-        self.heap.iter()
-    }
-}
-
-#[derive(Default, Debug)]
-pub struct UserSession {
-    file: PathBuf,
-    nonce: [u8; 16],
-    encrypted_key: [u8; 32],
-    key: [u8; 32],
-    keeper: Keeper,
-}
-
 fn disk_dump(session: &UserSession) -> Result<(), Error> {
-    info!("Keeper dump {:?}", session.keeper);
+    info!("Disk dump ✇ | {:?} user session saved to file: {:?} 💽", session.keeper.username, session.file);
     let encrypted_blob = EncryptedBlob::encrypt(&session.keeper, &session.key)?;
     let file_content = session
         .nonce
@@ -125,7 +45,7 @@ pub fn add_privacy(
     if url.is_empty() || username.is_empty() || password.is_empty() {
         return Err(Error::InvalidReader);
     }
-    info!("Adding privacy");
+    info!("Adding privacy for {0}", username);
     let mut session_guard = session_mutex.lock()?;
     let session = session_guard.as_mut().ok_or(Error::InvalidReader)?;
     let rand_uniqid = Uuid::new_v4().to_string();
@@ -205,10 +125,7 @@ pub fn create_account(
     if username.is_empty() || password.is_empty() {
         return Err(Error::InvalidKeeper);
     }
-    info!(
-        "Creating an account... {0}. {1},",
-        username, password
-    );
+    info!("Creating an account for {0}", username);
     let mut session = session.lock()?;
     if session.is_some() {
         warn!("Session exists");
