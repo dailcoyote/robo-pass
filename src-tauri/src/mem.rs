@@ -12,8 +12,8 @@ pub struct Privacy {
 
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
 pub struct PrivacySerialize {
-    pub keeper_id: String,
-    pub privacy: Privacy,
+    pub hash: String,
+    pub credential: Privacy,
 }
 
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
@@ -33,9 +33,9 @@ impl Keeper {
         &self.username
     }
 
-    pub fn add(&mut self, uniqid: String, url: String, username: String, password: String) {
+    pub fn add(&mut self, unique_hashtag: String, url: String, username: String, password: String) {
         self.heap.insert(
-            uniqid,
+            unique_hashtag,
             Privacy {
                 url,
                 username,
@@ -44,12 +44,12 @@ impl Keeper {
         );
     }
 
-    pub fn remove(&mut self, uniqid: &str) -> bool {
-        self.heap.remove(uniqid).is_some()
+    pub fn remove(&mut self, unique_hashtag: &str) -> bool {
+        self.heap.remove(unique_hashtag).is_some()
     }
 
-    pub fn update(&mut self, uniqid: &String, url: String, username: String, password: String) {
-        match self.heap.get_mut(uniqid) {
+    pub fn update(&mut self, unique_hashtag: &String, url: String, username: String, password: String) {
+        match self.heap.get_mut(unique_hashtag) {
             Some(privacy) => {
                 *privacy = Privacy {
                     url,
@@ -57,12 +57,12 @@ impl Keeper {
                     password,
                 }
             } // If the key exists, update the value
-            None => info!("Unique Id '{}' does not exist in the HashMap.", uniqid), // If the key does not exist, print a message
+            None => info!("Unique Id '{}' does not exist in the HashMap.", unique_hashtag), // If the key does not exist, print a message
         }
     }
 
-    pub fn entry(&self, uniqid: &str) -> Option<&Privacy> {
-        self.heap.get(uniqid)
+    pub fn entry(&self, unique_hashtag: &str) -> Option<&Privacy> {
+        self.heap.get(unique_hashtag)
     }
 
     pub fn entries(&self) -> impl Iterator<Item = (&String, &Privacy)> {

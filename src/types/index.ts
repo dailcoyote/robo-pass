@@ -5,6 +5,6 @@ export type Credential = {
 }
 
 export type KeeperCredential = {
-    keeper_id: string,
-    privacy: Credential
+    hash: string,
+    credential: Credential
 }

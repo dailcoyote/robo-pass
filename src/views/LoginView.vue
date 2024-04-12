@@ -38,7 +38,7 @@ async function onNavigateToCreate() {
       </a>
     </div>
 
-    <form class="login-box" onsubmit="event.preventDefault();">
+    <form class="login-box" onsubmit="event.preventDefault();" autocomplete="off">
       <input v-model="username" placeholder="Enter an username..." required />
       <input
         v-model="password"

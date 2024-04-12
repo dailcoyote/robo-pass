@@ -1,4 +1,4 @@
-use log::{debug, error, info, trace, warn};
+use log::{debug, error, info, warn};
 use once_cell::sync::Lazy;
 use std::fs;
 use std::path::PathBuf;
@@ -48,28 +48,28 @@ pub fn add_privacy(
     info!("Adding privacy for {0}", username);
     let mut session_guard = session_mutex.lock()?;
     let session = session_guard.as_mut().ok_or(Error::InvalidReader)?;
-    let rand_uniqid = Uuid::new_v4().to_string();
-    let privacy_id = rand_uniqid.clone();
-    session.keeper.add(rand_uniqid, url, username, password);
+    let rand_hashtag = Uuid::new_v4().to_string();
+    let unique_hashtag = rand_hashtag.clone();
+    session.keeper.add(rand_hashtag, url, username, password);
     disk_dump(session)?;
-    Ok(privacy_id)
+    Ok(unique_hashtag)
 }
 
 #[tauri::command]
 pub fn update_privacy(
-    uniqid: String,
+    unique_hashtag: String,
     url: String,
     username: String,
     password: String,
     session_mutex: State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<bool, Error> {
-    if uniqid.is_empty() || url.is_empty() || username.is_empty() || password.is_empty() {
+    if unique_hashtag.is_empty() || url.is_empty() || username.is_empty() || password.is_empty() {
         return Err(Error::InvalidReader);
     }
-    info!("Updating privacy by {0}", uniqid);
+    info!("Updating privacy by {0}", unique_hashtag);
     let mut session_guard = session_mutex.lock()?;
     let session = session_guard.as_mut().ok_or(Error::InvalidReader)?;
-    session.keeper.update(&uniqid, url, username, password);
+    session.keeper.update(&unique_hashtag, url, username, password);
     disk_dump(session)?;
     Ok(true)
 }
@@ -87,29 +87,29 @@ pub fn fetch_sorted_privacy_vec(
     let mut sorted_privacy_vec: Vec<PrivacySerialize> = session
         .keeper
         .entries()
-        .map(|(keeper_id, privacy)| PrivacySerialize {
-            keeper_id: keeper_id.to_string(),
-            privacy: Privacy {
+        .map(|(unique_hashtag, privacy)| PrivacySerialize {
+            hash: unique_hashtag.to_string(),
+            credential: Privacy {
                 url: privacy.url.to_string(),
                 username: privacy.username.to_string(),
                 password: privacy.password.to_string(),
             },
         })
         .collect();
-    sorted_privacy_vec.sort_by(|a, b| a.privacy.url.cmp(&b.privacy.url));
+    sorted_privacy_vec.sort_by(|a, b| a.credential.url.cmp(&b.credential.url));
 
     Ok(sorted_privacy_vec.clone())
 }
 
 #[tauri::command]
 pub fn remove_privacy(
-    uniqid: String,
+    unique_hashtag: String,
     session_mutex: State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<(), Error> {
-    info!("Removing privacy by {0}", uniqid);
+    info!("Removing privacy by {0}", unique_hashtag);
     let mut session_guard = session_mutex.lock()?;
     let session = session_guard.as_mut().ok_or(Error::InvalidReader)?;
-    if !session.keeper.remove(&uniqid) {
+    if !session.keeper.remove(&unique_hashtag) {
         return Err(Error::InvalidParameter);
     }
     disk_dump(session)?;

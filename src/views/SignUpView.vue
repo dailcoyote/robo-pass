@@ -46,7 +46,7 @@ async function create() {
       <button class="lemon-effect" @click="back">Back</button>
     </div>
 
-    <form class="login-box" onsubmit="event.preventDefault();">
+    <form class="login-box" onsubmit="event.preventDefault();" autocomplete="off">
       <input v-model="username" placeholder="Enter an username..." required />
       <input
         v-model="password"

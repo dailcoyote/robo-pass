@@ -23,7 +23,7 @@ const router = useRouter();
 const state = reactive({
   addCredentialDialogVisible: false,
   dialog: {
-    credentialID: "",
+    activeCredentialKey: null,
     url: "",
     username: "",
     password: "",
@@ -65,23 +65,23 @@ function displaySnackbar(msg: string, type: TypeMessages) {
   });
 }
 
-function openCredentialDialog(uniqid: string | null) {
+function openCredentialDialog(uniqueHashtag: string | null) {
   state.validatorBox = "";
-  if (!uniqid) {
+  if (!uniqueHashtag) {
     state.dialog.mode = EditionMode.Create;
   }
-  if (typeof uniqid === "string") {
+  if (typeof uniqueHashtag === "string") {
     let credential: Credential | undefined =
       state.keeperCredentialsSharedVector.find(
-        (item: KeeperCredential) => item.keeper_id == uniqid
-      )?.privacy || undefined;
+        (item: KeeperCredential) => item.hash == uniqueHashtag
+      )?.credential || undefined;
 
     if (!credential) {
       displaySnackbar("Credential not found", TypeMessages.Warning);
       return;
     }
 
-    state.dialog.credentialID = uniqid;
+    state.dialog.activeCredentialKey = uniqueHashtag;
     state.dialog.url = credential.url;
     state.dialog.username = credential.username;
     state.dialog.password = credential.password;
@@ -92,7 +92,7 @@ function openCredentialDialog(uniqid: string | null) {
 }
 
 function closeCredentialDialog() {
-  state.dialog.credentialID = "";
+  state.dialog.activeCredentialKey = "";
   state.dialog.url = "";
   state.dialog.username = "";
   state.dialog.password = "";
@@ -103,9 +103,11 @@ function closeCredentialDialog() {
 /****   IPC ACTIONS  ****/
 async function fetchSortedKeeperCredentials() {
   try {
-    state.keeperCredentialsSharedVector = await invoke(
+    let heap: Array<KeeperCredential> = await invoke(
       "fetch_sorted_privacy_vec"
     );
+    state.keeperCredentialsSharedVector = [...heap];
+    heap = [];
   } catch (e: any) {
     displaySnackbar(e.error || "Error reading credentials", TypeMessages.Error);
   }
@@ -118,38 +120,61 @@ async function saveKeeperCredential() {
 
   try {
     if (state.dialog.mode == EditionMode.Create) {
-      state.dialog.credentialID = await invoke("add_privacy", {
+      state.dialog.activeCredentialKey = await invoke("add_privacy", {
         url,
         username,
         password,
+      });
+      state.keeperCredentialsSharedVector.push({
+        hash: state.dialog.activeCredentialKey,
+        credential: {
+          url,
+          username,
+          password,
+        },
       });
     } else if (state.dialog.mode == EditionMode.Update) {
-      let uniqid = state.dialog.credentialID;
       await invoke("update_privacy", {
-        uniqid,
+        uniqueHashtag: state.dialog.activeCredentialKey,
         url,
         username,
         password,
       });
+
+      state.keeperCredentialsSharedVector.forEach(
+        (item: Credential, index: number) => {
+          if (item.hash == state.dialog.activeCredentialKey) {
+            state.keeperCredentialsSharedVector[index].credential = {
+              url,
+              username,
+              password,
+            };
+          }
+        }
+      );
     } else {
       throw new Error("EditionMode Not Found");
     }
-    state.lastCredentialModifications.add(state.dialog.credentialID);
+    state.lastCredentialModifications.add(state.dialog.activeCredentialKey);
     displaySnackbar("Data saved to disk", TypeMessages.Success);
-    fetchSortedKeeperCredentials();
     closeCredentialDialog();
   } catch (e: any) {
     state.validatorBox = e;
   }
 }
 
-async function removeKeeperCredential(uniqid: string) {
+async function removeKeeperCredential(uniqueHashtag: string) {
   try {
     await invoke("remove_privacy", {
-      uniqid,
+      uniqueHashtag,
     });
+    state.keeperCredentialsSharedVector = [
+      ...state.keeperCredentialsSharedVector.filter((item: Credential) => {
+        return item.hash !== uniqueHashtag;
+      }),
+    ];
+    state.lastCredentialModifications.delete(uniqueHashtag);
     displaySnackbar("Data saved to disk", TypeMessages.Success);
-    fetchSortedKeeperCredentials();
   } catch (e: any) {
     displaySnackbar(
       e.error || "Error removing credentials",
@@ -181,26 +206,26 @@ onMounted(() => {
 
     <div class="credential--box-list">
       <template
-        v-for="{ keeper_id, privacy } in state.keeperCredentialsSharedVector"
-        :key="keeper_id"
+        v-for="{ hash, credential } in state.keeperCredentialsSharedVector"
+        :key="hash"
       >
         <CredentialBox
-          :url="privacy.url"
-          :username="privacy.username"
-          :password="privacy.password"
+          :url="credential.url"
+          :username="credential.username"
+          :password="credential.password"
           :class="[
-            state.lastCredentialModifications.has(keeper_id)
+            state.lastCredentialModifications.has(hash)
               ? 'active-credential__box'
               : 'passive-credential__box',
           ]"
           @on-edit="
             () => {
-              openCredentialDialog(keeper_id);
+              openCredentialDialog(hash);
             }
           "
           @on-remove="
             () => {
-              removeKeeperCredential(keeper_id);
+              removeKeeperCredential(hash);
             }
           "
         />
@@ -211,12 +236,18 @@ onMounted(() => {
       <template v-slot:body>
         <form
           class="add-credential__form_box"
+          autocomplete="off"
           @submit.prevent="saveKeeperCredential"
         >
-          <input v-model="state.dialog.url" placeholder="Enter a url..." />
+          <input
+            v-model="state.dialog.url"
+            placeholder="Enter a url..."
+            autocomplete="off"
+          />
           <input
             v-model="state.dialog.username"
             placeholder="Enter an username..."
+            autocomplete="off"
           />
           <input
             v-model="state.dialog.password"
