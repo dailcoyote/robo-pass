@@ -22,7 +22,10 @@ pub static APP_FOLDER: Lazy<PathBuf> = Lazy::new(|| {
 });
 
 fn disk_dump(session: &UserSession) -> Result<(), Error> {
-    info!("Disk dump ✇ | {:?} user session saved to file: {:?} 💽", session.keeper.username, session.file);
+    info!(
+        "Disk dump ✇ | {:?} user session saved to file: {:?} 💽",
+        session.keeper.username, session.file
+    );
     let encrypted_blob = EncryptedBlob::encrypt(&session.keeper, &session.key)?;
     let file_content = session
         .nonce
@@ -69,7 +72,9 @@ pub fn update_privacy(
     info!("Updating privacy by {0}", unique_hashtag);
     let mut session_guard = session_mutex.lock()?;
     let session = session_guard.as_mut().ok_or(Error::InvalidReader)?;
-    session.keeper.update(&unique_hashtag, url, username, password);
+    session
+        .keeper
+        .update(&unique_hashtag, url, username, password);
     disk_dump(session)?;
     Ok(true)
 }
@@ -215,4 +220,25 @@ pub fn logout(session: State<'_, Mutex<Option<UserSession>>>) -> Result<(), Erro
 pub fn can_user_access(session: State<'_, Mutex<Option<UserSession>>>) -> Result<bool, Error> {
     let session = session.lock()?;
     Ok(session.is_some())
+}
+
+#[tauri::command]
+pub fn generate_password() -> Result<String, Error> {
+    debug!("Generating password");
+    const PASSWORD_LENGTH: usize = 16;
+    
+    if !(10..=128).contains(&PASSWORD_LENGTH) {
+        return Err(Error::InvalidParameter);
+    }
+    let alphabet: String = vec![
+        String::from("abcdefghijklmnopqrstuvwxyz"),
+        String::from("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+        String::from("0123456789"),
+        String::from("!@#$%^&*")
+    ] .join("");
+
+    Ok(cryptography::random_password(
+        alphabet.as_bytes(),
+        PASSWORD_LENGTH,
+    ))
 }

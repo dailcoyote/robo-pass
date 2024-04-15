@@ -8,7 +8,7 @@
     >
       <header id="credential--modal__content_title">
         <slot name="header">
-          <h3>Add Credential</h3>
+          <h2>Credential Form</h2>
         </slot>
       </header>
 
@@ -42,13 +42,13 @@ export default defineComponent({
 }
 
 #credential--modal__content {
-  margin: 8%;
+  margin: 2%;
   box-shadow: 2px 2px 20px 1px;
   overflow-x: auto;
   display: flex;
   flex-direction: column;
-  width: 700px;
-  height: 700px;
+  width: 720px;
+  height: 820px;
   background: no-repeat url('../assets/crypto_security_texture.jpg');
   background-size: cover;
 }

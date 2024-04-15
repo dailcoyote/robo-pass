@@ -27,17 +27,28 @@ const state = reactive({
     url: "",
     username: "",
     password: "",
-    mode: EditionMode.Non,
+    editionMode: EditionMode.Non,
+    passwordEyeDisabled: false,
   },
+  
   keeperCredentialsSharedVector: new Array<KeeperCredential>(),
   lastCredentialModifications: new Set<string>(),
   validatorBox: "",
 });
 
 const credentialModalActionButtonLabel = computed(() => {
-  if (state.dialog.mode === EditionMode.Create) return "Create";
-  if (state.dialog.mode === EditionMode.Update) return "Save";
+  if (state.dialog.editionMode === EditionMode.Create) return "Create";
+  if (state.dialog.editionMode === EditionMode.Update) return "Save";
   return "Locked";
+});
+
+const shouldShowGeneratePasswordButton = computed(() => {
+  if (state.dialog.editionMode === EditionMode.Create) return true;
+  return false;
+});
+
+const currentPasswordInputType = computed(() => {
+  return state.dialog.passwordEyeDisabled ? 'text' : 'password';
 });
 
 /****   UI ACTIONS  ****/
@@ -68,7 +79,7 @@ function displaySnackbar(msg: string, type: TypeMessages) {
 function openCredentialDialog(uniqueHashtag: string | null) {
   state.validatorBox = "";
   if (!uniqueHashtag) {
-    state.dialog.mode = EditionMode.Create;
+    state.dialog.editionMode = EditionMode.Create;
   }
   if (typeof uniqueHashtag === "string") {
     let credential: Credential | undefined =
@@ -85,7 +96,7 @@ function openCredentialDialog(uniqueHashtag: string | null) {
     state.dialog.url = credential.url;
     state.dialog.username = credential.username;
     state.dialog.password = credential.password;
-    state.dialog.mode = EditionMode.Update;
+    state.dialog.editionMode = EditionMode.Update;
   }
 
   state.addCredentialDialogVisible = true;
@@ -96,11 +107,17 @@ function closeCredentialDialog() {
   state.dialog.url = "";
   state.dialog.username = "";
   state.dialog.password = "";
-  state.dialog.mode = EditionMode.Non;
+  state.dialog.editionMode = EditionMode.Non;
+  state.dialog.passwordEyeDisabled = false;
   state.addCredentialDialogVisible = false;
 }
 
 /****   IPC ACTIONS  ****/
+async function generateRandomPassword() {
+  state.dialog.passwordEyeDisabled = true;
+  state.dialog.password = await invoke("generate_password");
+}
+
 async function fetchSortedKeeperCredentials() {
   try {
     let heap: Array<KeeperCredential> = await invoke(
@@ -119,7 +136,7 @@ async function saveKeeperCredential() {
   let password = state.dialog.password;
 
   try {
-    if (state.dialog.mode == EditionMode.Create) {
+    if (state.dialog.editionMode == EditionMode.Create) {
       state.dialog.activeCredentialKey = await invoke("add_privacy", {
         url,
         username,
@@ -133,7 +150,7 @@ async function saveKeeperCredential() {
           password,
         },
       });
-    } else if (state.dialog.mode == EditionMode.Update) {
+    } else if (state.dialog.editionMode == EditionMode.Update) {
       await invoke("update_privacy", {
         uniqueHashtag: state.dialog.activeCredentialKey,
         url,
@@ -159,7 +176,7 @@ async function saveKeeperCredential() {
     displaySnackbar("Data saved to disk", TypeMessages.Success);
     closeCredentialDialog();
   } catch (e: any) {
-    state.validatorBox = e;
+    state.validatorBox = e.error || e;
   }
 }
 
@@ -169,9 +186,11 @@ async function removeKeeperCredential(uniqueHashtag: string) {
       uniqueHashtag,
     });
     state.keeperCredentialsSharedVector = [
-      ...state.keeperCredentialsSharedVector.filter((item: KeeperCredential) => {
-        return item.hash !== uniqueHashtag;
-      }),
+      ...state.keeperCredentialsSharedVector.filter(
+        (item: KeeperCredential) => {
+          return item.hash !== uniqueHashtag;
+        }
+      ),
     ];
     state.lastCredentialModifications.delete(uniqueHashtag);
     displaySnackbar("Data saved to disk", TypeMessages.Success);
@@ -237,29 +256,48 @@ onMounted(() => {
         <form
           class="add-credential__form_box"
           autocomplete="off"
-          @submit.prevent="saveKeeperCredential"
+          onsubmit="event.preventDefault();"
         >
           <input
             v-model="state.dialog.url"
             placeholder="Enter a url..."
             autocomplete="off"
+            type="text"
           />
           <input
             v-model="state.dialog.username"
             placeholder="Enter an username..."
             autocomplete="off"
+            type="text"
           />
           <input
+            id="credential_password_input"
             v-model="state.dialog.password"
             placeholder="Enter a password..."
-            type="password"
+            :type="currentPasswordInputType"
           />
+          <div>
+            <label class="switch">
+              <input type="checkbox" name="password_eye" v-model="state.dialog.passwordEyeDisabled" />
+              <span class="slider round"></span>
+            </label>
+            <h4>Show password</h4>
+          </div>
           <div class="row">
-            <button class="bluesky-effect" type="submit">
+            <button
+              class="bluesky-effect"
+              type="submit"
+              @click="saveKeeperCredential()"
+            >
               {{ credentialModalActionButtonLabel }}
             </button>
             <button class="vermillion-effect" @click="closeCredentialDialog()">
               Cancel
+            </button>
+          </div>
+          <div v-if="shouldShowGeneratePasswordButton" class="row">
+            <button class="vermillion-effect" @click="generateRandomPassword()">
+              Generate password
             </button>
           </div>
           <div v-show="state.validatorBox" class="alertBox">
@@ -276,17 +314,21 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
 }
+
 #add_credential--button {
   will-change: filter;
   transition: 0.5s;
 }
+
 #add_credential--button:hover {
   filter: drop-shadow(0 0 1em #ffc130);
 }
+
 #logout--button {
   will-change: filter;
   transition: 0.5s;
 }
+
 #logout--button:hover {
   filter: drop-shadow(0 0 1em #24c8db);
 }
@@ -301,18 +343,32 @@ onMounted(() => {
   shape-image-threshold: 70%;
 }
 
+.active-credential__box {
+  border: 1px solid #4fffb0;
+}
+
+.passive-credential__box {
+  border: 1px solid transparent;
+}
+
+/* UI FORM */
+label {
+  font: 1rem "Fira Sans", sans-serif;
+}
+
 .add-credential__form_box {
   display: flex;
   margin: 0 auto;
   flex-direction: column;
   justify-content: center;
-  padding: 8%;
+  padding: 5% 10%;
   /* opacity: 0.35; */
   shape-image-threshold: 70%;
   outline: none;
 }
 
-.add-credential__form_box > input {
+.add-credential__form_box > input[type="text"],
+input[type="password"] {
   margin: 24px 0;
   will-change: filter;
 }
@@ -327,13 +383,5 @@ onMounted(() => {
 
 .add-credential__form_box > .row > button {
   margin: 36px 18px;
-}
-
-.active-credential__box {
-  border: 1px solid #4fffb0;
-}
-
-.passive-credential__box {
-  border: 1px solid transparent;
 }
 </style>

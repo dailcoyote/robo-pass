@@ -21,6 +21,7 @@ use kernel::remove_privacy;
 use kernel::login;
 use kernel::logout;
 use kernel::can_user_access;
+use kernel::generate_password;
 use mem::UserSession;
 use crate::logger::setup_logger;
 
@@ -41,7 +42,8 @@ fn main() {
             remove_privacy,
             login,
             logout,
-            can_user_access
+            can_user_access,
+            generate_password
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -71,7 +71,7 @@ pub fn decrypt_key(master_key: &[u8], encrypted_key: &[u8], nonce: &[u8]) -> Res
   Ok(plaintext.try_into().unwrap())
 }
 
-pub fn generate_password(alphabet: &[u8], len: usize) -> String {
+pub fn random_password(alphabet: &[u8], len: usize) -> String {
   assert!(alphabet.len() < 256);
   let mod_ceil = alphabet.len().next_power_of_two();
   (0..len).map(|_| loop {
