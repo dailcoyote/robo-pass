@@ -7,6 +7,14 @@
       <div>
         <img
           class="privacy-icon"
+          src="../assets/clipboard.png"
+          style="margin-right: 16px"
+          width="24"
+          height="24"
+          @click="emit('onPasswordCopy')"
+        />
+        <img
+          class="privacy-icon"
           src="../assets/privacy.png"
           style="margin-right: 16px"
           width="24"

@@ -28,12 +28,12 @@ const state = reactive({
     username: "",
     password: "",
     editionMode: EditionMode.Non,
-    passwordEyeDisabled: false,
+    passwordBodyVisible: false,
+    validatorBox: "",
   },
-  
+
   keeperCredentialsSharedVector: new Array<KeeperCredential>(),
   lastCredentialModifications: new Set<string>(),
-  validatorBox: "",
 });
 
 const credentialModalActionButtonLabel = computed(() => {
@@ -48,7 +48,7 @@ const shouldShowGeneratePasswordButton = computed(() => {
 });
 
 const currentPasswordInputType = computed(() => {
-  return state.dialog.passwordEyeDisabled ? 'text' : 'password';
+  return state.dialog.passwordBodyVisible ? "text" : "password";
 });
 
 /****   UI ACTIONS  ****/
@@ -77,7 +77,6 @@ function displaySnackbar(msg: string, type: TypeMessages) {
 }
 
 function openCredentialDialog(uniqueHashtag: string | null) {
-  state.validatorBox = "";
   if (!uniqueHashtag) {
     state.dialog.editionMode = EditionMode.Create;
   }
@@ -103,19 +102,34 @@ function openCredentialDialog(uniqueHashtag: string | null) {
 }
 
 function closeCredentialDialog() {
+  state.dialog.validatorBox = "";
   state.dialog.activeCredentialKey = "";
   state.dialog.url = "";
   state.dialog.username = "";
   state.dialog.password = "";
   state.dialog.editionMode = EditionMode.Non;
-  state.dialog.passwordEyeDisabled = false;
+  state.dialog.passwordBodyVisible = false;
   state.addCredentialDialogVisible = false;
 }
 
 /****   IPC ACTIONS  ****/
 async function generateRandomPassword() {
-  state.dialog.passwordEyeDisabled = true;
+  if (!state.dialog.passwordBodyVisible) {
+    state.dialog.passwordBodyVisible = true;
+  }
   state.dialog.password = await invoke("generate_password");
+}
+
+async function copy(uniqueHashtag: string) {
+  try {
+    await invoke("copy_to_clipboard", {
+      uniqueHashtag,
+      thing: "password",
+    });
+    displaySnackbar("Password copied", TypeMessages.Success);
+  } catch (e: any) {
+    displaySnackbar(e.error || "Error copying password", TypeMessages.Error);
+  }
 }
 
 async function fetchSortedKeeperCredentials() {
@@ -176,7 +190,7 @@ async function saveKeeperCredential() {
     displaySnackbar("Data saved to disk", TypeMessages.Success);
     closeCredentialDialog();
   } catch (e: any) {
-    state.validatorBox = e.error || e;
+    state.dialog.validatorBox = e.error || e;
   }
 }
 
@@ -247,6 +261,11 @@ onMounted(() => {
               removeKeeperCredential(hash);
             }
           "
+          @on-password-copy="
+            () => {
+              copy(hash);
+            }
+          "
         />
       </template>
     </div>
@@ -278,7 +297,11 @@ onMounted(() => {
           />
           <div>
             <label class="switch">
-              <input type="checkbox" name="password_eye" v-model="state.dialog.passwordEyeDisabled" />
+              <input
+                type="checkbox"
+                name="password_eye"
+                v-model="state.dialog.passwordBodyVisible"
+              />
               <span class="slider round"></span>
             </label>
             <h4>Show password</h4>
@@ -300,8 +323,8 @@ onMounted(() => {
               Generate password
             </button>
           </div>
-          <div v-show="state.validatorBox" class="alertBox">
-            <p>{{ state.validatorBox }}</p>
+          <div v-show="state.dialog.validatorBox" class="alertBox">
+            <p>{{ state.dialog.validatorBox }}</p>
           </div>
         </form>
       </template>
@@ -361,7 +384,7 @@ label {
   margin: 0 auto;
   flex-direction: column;
   justify-content: center;
-  padding: 5% 10%;
+  padding: 5% 10% 0 10%;
   /* opacity: 0.35; */
   shape-image-threshold: 70%;
   outline: none;

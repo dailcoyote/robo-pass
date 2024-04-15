@@ -1,3 +1,4 @@
+use arboard::Clipboard;
 use log::{debug, error, info, warn};
 use once_cell::sync::Lazy;
 use std::fs;
@@ -223,10 +224,32 @@ pub fn can_user_access(session: State<'_, Mutex<Option<UserSession>>>) -> Result
 }
 
 #[tauri::command]
+pub fn copy_to_clipboard(
+    unique_hashtag: String,
+    thing: String,
+    session_mutex: State<'_, Mutex<Option<UserSession>>>,
+) -> Result<(), Error> {
+    debug!(
+        "Copying {:?} to clipboard by hashtag {:?}",
+        thing, unique_hashtag
+    );
+    let mut session_guard = session_mutex.lock()?;
+    let session = session_guard.as_mut().ok_or(Error::InvalidReader)?;
+    let entry = session.keeper.entry(&unique_hashtag).ok_or(Error::InvalidParameter)?;
+    let text = match thing.as_str() {
+        "username" => &entry.username,
+        "password" => &entry.password,
+        _ => return Err(Error::InvalidParameter),
+    };
+    Clipboard::new()?.set_text(text.clone())?;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn generate_password() -> Result<String, Error> {
     debug!("Generating password");
     const PASSWORD_LENGTH: usize = 16;
-    
+
     if !(10..=128).contains(&PASSWORD_LENGTH) {
         return Err(Error::InvalidParameter);
     }
@@ -234,8 +257,9 @@ pub fn generate_password() -> Result<String, Error> {
         String::from("abcdefghijklmnopqrstuvwxyz"),
         String::from("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
         String::from("0123456789"),
-        String::from("!@#$%^&*")
-    ] .join("");
+        String::from("!@#$%^&*"),
+    ]
+    .join("");
 
     Ok(cryptography::random_password(
         alphabet.as_bytes(),

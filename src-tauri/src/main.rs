@@ -22,6 +22,7 @@ use kernel::login;
 use kernel::logout;
 use kernel::can_user_access;
 use kernel::generate_password;
+use kernel::copy_to_clipboard;
 use mem::UserSession;
 use crate::logger::setup_logger;
 
@@ -43,7 +44,8 @@ fn main() {
             login,
             logout,
             can_user_access,
-            generate_password
+            generate_password,
+            copy_to_clipboard
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
