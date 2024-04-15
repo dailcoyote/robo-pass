@@ -8,10 +8,28 @@
         <img
           class="privacy-icon"
           src="../assets/privacy.png"
-          style="margin-right: 12px"
+          style="margin-right: 16px"
           width="24"
           height="24"
           @click="emit('onEdit')"
+        />
+        <img
+          v-if="state.passwordEyeActive"
+          class="privacy-icon"
+          src="../assets/hide_password.png"
+          style="margin-right: 16px"
+          width="24"
+          height="24"
+          @click="togglePassword()"
+        />
+        <img
+          v-else
+          class="privacy-icon"
+          src="../assets/show_password.png"
+          style="margin-right: 16px"
+          width="24"
+          height="24"
+          @click="togglePassword()"
         />
         <img
           class="remove-icon"
@@ -27,18 +45,30 @@
       username: {{ props.username }}
     </div>
     <div class="credential--box__item" style="margin-top: 8px">
-      password: {{ props.password }}
+      password: {{ pwMask }}
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { Credential } from "../types";
-import { defineProps, defineEmits } from "vue";
+import { reactive, defineProps, defineEmits, computed } from "vue";
 
-const emit = defineEmits(['onEdit', 'onRemove'])
+const emit = defineEmits(["onEdit", "onRemove"]);
 const props = defineProps<Credential>();
 
+const state = reactive({
+  passwordEyeActive: false,
+});
+const pwMask = computed(() => {
+  return state.passwordEyeActive
+    ? props.password
+    : new Array(props.password?.length).fill("⚛").join("");
+});
+
+function togglePassword() {
+  state.passwordEyeActive = !state.passwordEyeActive;
+}
 </script>
 
 <style scoped>
