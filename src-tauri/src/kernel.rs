@@ -230,7 +230,7 @@ pub fn copy_to_clipboard(
     session_mutex: State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<(), Error> {
     debug!(
-        "Copying {:?} to clipboard by hashtag {:?}",
+        "Copying {:?} field to clipboard by hashtag {:?}",
         thing, unique_hashtag
     );
     let mut session_guard = session_mutex.lock()?;

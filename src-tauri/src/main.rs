@@ -25,6 +25,7 @@ use kernel::generate_password;
 use kernel::copy_to_clipboard;
 use mem::UserSession;
 use crate::logger::setup_logger;
+use log::{info};
 
 fn main() {
     if !APP_FOLDER.exists() {
@@ -47,6 +48,28 @@ fn main() {
             generate_password,
             copy_to_clipboard
         ])
+        .setup(|_app| {
+            let unicode_backslash = "\u{5C}";
+            let unicode_vertical = "\u{7C}";
+
+            info!(" ______      _  ");
+            info!(" | ___ {0}    | | ", unicode_backslash); 
+            info!(" | |_/ /___ | |__   ___    _ __   __ _ ___ ___  ");
+            info!(" |    // _ {0}{1} '_ {0} / _ {0}  | '_ {0} / _` / __/ __| ", unicode_backslash, unicode_vertical);
+            info!(" | |{0} {0} (_) | |_) | (_) | | |_) | (_| {0}__ {0}__ {0} ", unicode_backslash);
+            info!(" {0}_{1} {0}_{0}___/{1}_.__/ {0}___/  {1} .__/ {0}__,_|___/___/ ", unicode_backslash, unicode_vertical);
+            info!("                          | |                   ");
+            info!("                          |_|                   ");
+
+            info!("");
+            info!("   _  _    __     __     __    ");
+            info!("  ( )( )  |  |   /  {0}   /  {0}  ", unicode_backslash);
+            info!("   {0}{0}//    )(  _( () )_( () )_ ", unicode_backslash);
+            info!("   (__)   |__|(_){0}__/(_){0}__/(_)", unicode_backslash);
+            info!("");
+
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
