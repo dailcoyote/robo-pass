@@ -32,7 +32,7 @@ fn main() {
         fs::create_dir(&*APP_FOLDER).expect("failed to create app folder");
     }
 
-    let _ = setup_logger();
+    let _ = setup_logger(&APP_FOLDER.join("logs")).expect("failed to initialize logger");
 
     tauri::Builder::default()
         .manage(Mutex::<Option<UserSession>>::default())
