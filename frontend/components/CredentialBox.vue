@@ -62,7 +62,7 @@
 import { Credential } from "../types";
 import { reactive, defineProps, defineEmits, computed } from "vue";
 
-const emit = defineEmits(["onEdit", "onRemove"]);
+const emit = defineEmits(["onEdit", "onRemove", "onPasswordCopy"]);
 const props = defineProps<Credential>();
 
 const state = reactive({
