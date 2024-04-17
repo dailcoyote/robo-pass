@@ -5,27 +5,27 @@
 )]
 mod cryptography;
 mod error;
+mod kernel;
 mod logger;
 mod mem;
-mod kernel;
 
 use std::fs;
 use std::sync::Mutex;
 
-use kernel::APP_FOLDER;
+use crate::logger::setup_logger;
 use kernel::add_privacy;
-use kernel::update_privacy;
+use kernel::can_user_access;
+use kernel::copy_to_clipboard;
 use kernel::create_account;
 use kernel::fetch_sorted_privacy_vec;
-use kernel::remove_privacy;
+use kernel::generate_password;
 use kernel::login;
 use kernel::logout;
-use kernel::can_user_access;
-use kernel::generate_password;
-use kernel::copy_to_clipboard;
+use kernel::remove_privacy;
+use kernel::update_privacy;
+use kernel::APP_FOLDER;
+use log::info;
 use mem::UserSession;
-use crate::logger::setup_logger;
-use log::{info};
 
 fn main() {
     if !APP_FOLDER.exists() {
@@ -53,11 +53,20 @@ fn main() {
             let unicode_vertical = "\u{7C}";
 
             info!(" ______      _  ");
-            info!(" | ___ {0}    | | ", unicode_backslash); 
+            info!(" | ___ {0}    | | ", unicode_backslash);
             info!(" | |_/ /___ | |__   ___    _ __   __ _ ___ ___  ");
-            info!(" |    // _ {0}{1} '_ {0} / _ {0}  | '_ {0} / _` / __/ __| ", unicode_backslash, unicode_vertical);
-            info!(" | |{0} {0} (_) | |_) | (_) | | |_) | (_| {0}__ {0}__ {0} ", unicode_backslash);
-            info!(" {0}_{1} {0}_{0}___/{1}_.__/ {0}___/  {1} .__/ {0}__,_|___/___/ ", unicode_backslash, unicode_vertical);
+            info!(
+                " |    // _ {0}{1} '_ {0} / _ {0}  | '_ {0} / _` / __/ __| ",
+                unicode_backslash, unicode_vertical
+            );
+            info!(
+                " | |{0} {0} (_) | |_) | (_) | | |_) | (_| {0}__ {0}__ {0} ",
+                unicode_backslash
+            );
+            info!(
+                " {0}_{1} {0}_{0}___/{1}_.__/ {0}___/  {1} .__/ {0}__,_|___/___/ ",
+                unicode_backslash, unicode_vertical
+            );
             info!("                          | |                   ");
             info!("                          |_|                   ");
 
@@ -70,6 +79,12 @@ fn main() {
 
             Ok(())
         })
+        .on_window_event(|event| match event.event() {
+            tauri::WindowEvent::Destroyed {} => {
+              info!("Robo-pass application has been disconnected 🔌");
+            }
+            _ => {}
+          })
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .expect("error while running robo-pass application");
 }
