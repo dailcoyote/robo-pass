@@ -23,10 +23,6 @@ pub static APP_FOLDER: Lazy<PathBuf> = Lazy::new(|| {
 });
 
 fn disk_dump(session: &UserSession) -> Result<(), Error> {
-    info!(
-        "Disk dump ✇ | {:?} user session saved to file: {:?} 💽",
-        session.keeper.username, session.file
-    );
     let encrypted_blob = EncryptedBlob::encrypt(&session.keeper, &session.key)?;
     let file_content = session
         .nonce
@@ -36,6 +32,9 @@ fn disk_dump(session: &UserSession) -> Result<(), Error> {
         .chain(encrypted_blob.bytes())
         .collect::<Vec<_>>();
     fs::write(&session.file, &file_content)?;
+    info!(
+        "|Disk dump ✇ | Opened Session synchronized with file > {:?} 💽", session.file
+    );
     Ok(())
 }
 
@@ -49,7 +48,7 @@ pub fn add_privacy(
     if url.is_empty() || username.is_empty() || password.is_empty() {
         return Err(Error::InvalidReader);
     }
-    info!("Adding privacy for {0}", username);
+    info!("|Сredentials| Adding privacy for {0}", username);
     let mut session_guard = session_mutex.lock()?;
     let session = session_guard.as_mut().ok_or(Error::InvalidReader)?;
     let rand_hashtag = Uuid::new_v4().to_string();
@@ -70,7 +69,7 @@ pub fn update_privacy(
     if unique_hashtag.is_empty() || url.is_empty() || username.is_empty() || password.is_empty() {
         return Err(Error::InvalidReader);
     }
-    info!("Updating privacy by {0}", unique_hashtag);
+    info!("|Сredentials| Updating privacy by {0} hashtag", unique_hashtag);
     let mut session_guard = session_mutex.lock()?;
     let session = session_guard.as_mut().ok_or(Error::InvalidReader)?;
     session
@@ -87,7 +86,7 @@ pub fn fetch_sorted_privacy_vec(
     let session_guard = session_mutex.lock()?;
     let session = session_guard.as_ref().ok_or(Error::InvalidReader)?;
     info!(
-        "Fetching privacy data by keeper {:?}",
+        "|Сredentials| Fetching privacy data by keeper {:?}",
         session.keeper.username
     );
     let mut sorted_privacy_vec: Vec<PrivacySerialize> = session
@@ -112,7 +111,7 @@ pub fn remove_privacy(
     unique_hashtag: String,
     session_mutex: State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<(), Error> {
-    info!("Removing privacy by {0}", unique_hashtag);
+    info!("|Сredentials| Removing privacy by {0} hashtag", unique_hashtag);
     let mut session_guard = session_mutex.lock()?;
     let session = session_guard.as_mut().ok_or(Error::InvalidReader)?;
     if !session.keeper.remove(&unique_hashtag) {
@@ -131,7 +130,7 @@ pub fn create_account(
     if username.is_empty() || password.is_empty() {
         return Err(Error::InvalidKeeper);
     }
-    info!("Creating an account for {0}", username);
+    info!("|Session| Creating an account for {0}", username);
     let mut session = session.lock()?;
     if session.is_some() {
         warn!("Session exists");
@@ -144,6 +143,8 @@ pub fn create_account(
     let master_key = cryptography::pbkdf2_hmac(password.as_bytes(), username.as_bytes());
     let key = cryptography::random_bytes::<32>();
     let (encrypted_key, nonce) = cryptography::encrypt_key(&master_key, &key)?;
+    info!("|Session| An Encryption Key 🔑 created for {:?}", username);
+
     let keeper = Keeper::create(username);
     *session = Some(UserSession {
         file,
@@ -152,8 +153,9 @@ pub fn create_account(
         key,
         keeper,
     });
+
     disk_dump(session.as_ref().unwrap())?;
-    warn!("An account created");
+    info!("|Сredentials| The account 📜 has been successfully created!");
     Ok(())
 }
 
@@ -163,7 +165,7 @@ pub fn login(
     password: String,
     session: State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<(), Error> {
-    info!("Logging in {0}", username);
+    info!("|Session| User login as {0}", username);
     if username.is_empty() || password.is_empty() {
         return Err(Error::InvalidKeeper);
     }
@@ -191,13 +193,11 @@ pub fn login(
         .decrypt(&key)
         .map_err(|_| Error::InvalidKeeper)?;
     if keeper.username() != username {
-        warn!("User not found");
+        warn!("Keeper not found");
         return Err(Error::InvalidReader);
     }
-    debug!("Session |username| > {:?}", keeper.username());
-    debug!("Session |encrypted_key| {:?}", encrypted_key);
-    debug!("Session |key| {:?}", key);
-    debug!("Session |file path| {:?}", file);
+    info!("|Session| The Identity Authentication is complete for {:?}! 🔐", username);
+
     *session = Some(UserSession {
         file,
         nonce,
@@ -205,14 +205,13 @@ pub fn login(
         key,
         keeper,
     });
-    info!("Keeper |{0}| logged", username);
     Ok(())
 }
 
 #[tauri::command]
 pub fn logout(session: State<'_, Mutex<Option<UserSession>>>) -> Result<(), Error> {
     let mut session = session.lock()?;
-    info!("Logging out {0}", logged_in = session.is_some());
+    info!("|Session| Logging out {0} 【⏻ 】", logged_in = session.is_some());
     *session = None;
     Ok(())
 }
@@ -230,7 +229,7 @@ pub fn copy_to_clipboard(
     session_mutex: State<'_, Mutex<Option<UserSession>>>,
 ) -> Result<(), Error> {
     debug!(
-        "Copying {:?} field to clipboard by hashtag {:?}",
+        "|Session| Copying {:?} field to clipboard by {:?} hashtag",
         thing, unique_hashtag
     );
     let mut session_guard = session_mutex.lock()?;
@@ -247,7 +246,7 @@ pub fn copy_to_clipboard(
 
 #[tauri::command]
 pub fn generate_password() -> Result<String, Error> {
-    debug!("Generating password");
+    debug!("|Security| Generating password");
     const PASSWORD_LENGTH: usize = 16;
 
     if !(10..=128).contains(&PASSWORD_LENGTH) {
